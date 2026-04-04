@@ -3,7 +3,7 @@ import path from "path";
 
 const KNOWLEDGE_DIR = path.join(process.cwd(), "knowledge");
 const SUPPORTED_EXTENSIONS = new Set([".pdf", ".docx", ".md", ".txt"]);
-const MAX_RESULTS = 4;
+const MAX_RESULTS = 6;
 const CHUNK_SIZE = 1400;
 const CHUNK_OVERLAP = 220;
 
@@ -239,9 +239,7 @@ export async function searchKnowledgeBase(query: string) {
     .slice(0, MAX_RESULTS);
 
   const shouldUseKnowledge =
-    rankedMatches.length > 0 &&
-    (rankedMatches[0].score >= 4 ||
-      rankedMatches.slice(0, 2).reduce((total, item) => total + item.score, 0) >= 6);
+    rankedMatches.length > 0;
 
   return {
     matches: rankedMatches,

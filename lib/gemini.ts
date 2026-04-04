@@ -7,6 +7,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 const SYSTEM_PROMPT = `
 You are Your Buddy In Ireland, a study assistant for Indian students.
 Focus on studying in Ireland, including visas, accommodation, education loans, university shortlisting, and course decisions.
+Accuracy is more important than speed, style, or completeness.
 Return valid GitHub-flavored Markdown.
 Follow these formatting rules strictly:
 1. No long paragraphs.
@@ -23,6 +24,9 @@ Follow these formatting rules strictly:
 12. Do not add long introductions, long conclusions, or decorative greetings.
 13. Do not use markdown tables unless the answer is actually a comparison.
 14. If facts can change, add one short verification note at the end.
+15. Never invent dates, fees, visa rules, deadlines, or work rights.
+16. If a fact is missing or uncertain, say so clearly.
+17. Preserve exact numbers and dates from the source when available.
 Keep answers compact unless the user asks for detail.
 `.trim();
 
@@ -50,7 +54,7 @@ function getReplyLanguageInstruction(replyLanguage: ReplyLanguage) {
   return replyLanguageProfiles[replyLanguage].replyInstruction;
 }
 
-function addGroundingCitations(response: {
+function getGroundingSourceLinks(response: {
   text?: string;
   candidates?: Array<{
     groundingMetadata?: {
@@ -64,40 +68,38 @@ function addGroundingCitations(response: {
     };
   }>;
 }) {
-  let text = response.text ?? "";
-  const supports =
-    response.candidates?.[0]?.groundingMetadata?.groundingSupports ?? [];
   const chunks =
     response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
 
-  const sortedSupports = [...supports].sort(
-    (left, right) =>
-      (right.segment?.endIndex ?? 0) - (left.segment?.endIndex ?? 0)
-  );
+  return Array.from(
+    new Set(
+      chunks
+        .map((chunk) => chunk.web?.uri?.trim())
+        .filter((uri): uri is string => Boolean(uri))
+    )
+  ).slice(0, 5);
+}
 
-  for (const support of sortedSupports) {
-    const endIndex = support.segment?.endIndex;
+function appendSourceDocList(text: string, fileNames: string[]) {
+  const uniqueFileNames = Array.from(new Set(fileNames)).slice(0, 4);
 
-    if (endIndex === undefined || !support.groundingChunkIndices?.length) {
-      continue;
-    }
-
-    const citationLinks = support.groundingChunkIndices
-      .map((chunkIndex) => {
-        const uri = chunks[chunkIndex]?.web?.uri;
-
-        return uri ? `[${chunkIndex + 1}](${uri})` : null;
-      })
-      .filter((citation): citation is string => Boolean(citation));
-
-    if (!citationLinks.length) {
-      continue;
-    }
-
-    text = `${text.slice(0, endIndex)} ${citationLinks.join(", ")}${text.slice(endIndex)}`;
+  if (!uniqueFileNames.length) {
+    return text.trim();
   }
 
-  return text.trim();
+  return `${text.trim()}\n\n**Source Docs:**\n${uniqueFileNames
+    .map((fileName) => `- ${fileName}`)
+    .join("\n")}`.trim();
+}
+
+function appendWebSourceList(text: string, urls: string[]) {
+  if (!urls.length) {
+    return text.trim();
+  }
+
+  return `${text.trim()}\n\n**Web Sources:**\n${urls
+    .map((url, index) => `- [Source ${index + 1}](${url})`)
+    .join("\n")}`.trim();
 }
 
 export async function getGeminiKnowledgeReply(
@@ -128,7 +130,10 @@ export async function getGeminiKnowledgeReply(
 ${getReplyLanguageInstruction(replyLanguage)}
 
 Answer the student using only the local document excerpts below.
-Do not use outside facts.
+Do not use outside facts or your own memory.
+Use only facts that are explicitly supported by the local excerpts.
+If a number, date, policy, or rule is not clearly present in the excerpts, do not guess.
+If the excerpts are incomplete, outdated, or ambiguous, trigger fallback.
 If the local documents are not enough, reply with exactly:
 __NEED_WEB_FALLBACK__
 Then add one short sentence about what is missing.
@@ -146,7 +151,10 @@ ${knowledgeContext}
   }
 
   return {
-    reply: text.replace(/^__NEED_WEB_FALLBACK__\s*/i, "").trim(),
+    reply: appendSourceDocList(
+      text.replace(/^__NEED_WEB_FALLBACK__\s*/i, "").trim(),
+      knowledgeMatches.map((match) => match.fileName)
+    ),
     needsWebFallback: text.startsWith("__NEED_WEB_FALLBACK__")
   };
 }
@@ -169,7 +177,9 @@ ${getReplyLanguageInstruction(replyLanguage)}
 
 Use Google Search only when needed for accurate and current information.
 Prefer practical answers for Indian students planning to study in Ireland.
-Add citations when grounded search results are used.
+Do not place source numbers or inline citations inside sentences.
+Keep the answer clean, then list sources separately at the end.
+Only state a visa rule, fee, date, or work right if grounded search supports it.
       `
     )}\n\nStudent question: ${message}`,
     config: {
@@ -177,5 +187,11 @@ Add citations when grounded search results are used.
     }
   });
 
-  return addGroundingCitations(response) || response.text?.trim() || null;
+  const text = response.text?.trim() || null;
+
+  if (!text) {
+    return null;
+  }
+
+  return appendWebSourceList(text, getGroundingSourceLinks(response));
 }

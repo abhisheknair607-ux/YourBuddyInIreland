@@ -1,11 +1,19 @@
 import type { ReplyLanguage } from "@/lib/replyLanguage";
 
 export type TutorRole = "user" | "assistant";
+export type TutorMessageSource =
+  | "mock"
+  | "mock-fallback"
+  | "knowledge"
+  | "web"
+  | "web-fallback";
 
 export type TutorMessage = {
   id: string;
   role: TutorRole;
   content: string;
+  source?: TutorMessageSource;
+  documents?: string[];
 };
 
 const delay = (ms: number) =>
@@ -22,11 +30,14 @@ export const INITIAL_TUTOR_MESSAGE: TutorMessage = {
 
 export const createTutorMessage = (
   role: TutorRole,
-  content: string
+  content: string,
+  metadata?: Pick<TutorMessage, "source" | "documents">
 ): TutorMessage => ({
   id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   role,
-  content
+  content,
+  source: metadata?.source,
+  documents: metadata?.documents
 });
 
 function selectLocalizedReply(

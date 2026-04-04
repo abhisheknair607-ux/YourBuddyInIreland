@@ -72,6 +72,18 @@ const markdownComponents: Components = {
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user";
+  const sourceLabel =
+    message.source === "knowledge"
+      ? "Knowledge Docs"
+      : message.source === "web-fallback"
+        ? "Web Fallback"
+        : message.source === "web"
+          ? "Web Verified"
+          : message.source === "mock-fallback"
+            ? "Safe Fallback"
+            : message.source === "mock"
+              ? "Mock Reply"
+              : null;
 
   return (
     <motion.div
@@ -105,6 +117,21 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] opacity-70">
             {isUser ? "You" : "AI Tutor"}
           </p>
+          {!isUser && sourceLabel ? (
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                {sourceLabel}
+              </span>
+              {message.documents?.slice(0, 2).map((document) => (
+                <span
+                  key={document}
+                  className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-medium text-sky-700"
+                >
+                  {document}
+                </span>
+              ))}
+            </div>
+          ) : null}
           {isUser ? (
             <p className="whitespace-pre-wrap break-words">{message.content}</p>
           ) : (

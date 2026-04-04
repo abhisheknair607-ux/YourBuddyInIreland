@@ -26,6 +26,7 @@ import {
 import {
   INITIAL_TUTOR_MESSAGE,
   TutorMessage,
+  TutorMessageSource,
   createTutorMessage
 } from "@/lib/mockChat";
 import { MockStudentUser, getMockUser, mockLogout } from "@/lib/mockAuth";
@@ -58,6 +59,8 @@ async function parseChatResponse(response: Response) {
       return JSON.parse(rawBody) as {
         error?: string;
         reply?: string;
+        source?: TutorMessageSource;
+        documents?: string[];
       };
     } catch {
       throw new Error("The chat API returned invalid JSON.");
@@ -300,7 +303,10 @@ export default function DashboardPage() {
 
       setMessages((current) => [
         ...current,
-        createTutorMessage("assistant", data.reply as string)
+        createTutorMessage("assistant", data.reply as string, {
+          source: data.source,
+          documents: data.documents
+        })
       ]);
     } catch (error) {
       const message =
