@@ -1,7 +1,5 @@
-import mammoth from "mammoth";
 import { promises as fs } from "fs";
 import path from "path";
-import { PDFParse } from "pdf-parse";
 
 const KNOWLEDGE_DIR = path.join(process.cwd(), "knowledge");
 const SUPPORTED_EXTENSIONS = new Set([".pdf", ".docx", ".md", ".txt"]);
@@ -75,6 +73,7 @@ function chunkText(text: string) {
 }
 
 async function readPdf(filePath: string) {
+  const { PDFParse } = await import("pdf-parse");
   const buffer = await fs.readFile(filePath);
   const parser = new PDFParse({ data: buffer });
 
@@ -87,6 +86,7 @@ async function readPdf(filePath: string) {
 }
 
 async function readDocx(filePath: string) {
+  const mammoth = await import("mammoth");
   const buffer = await fs.readFile(filePath);
   const result = await mammoth.extractRawText({ buffer });
 

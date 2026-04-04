@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getGeminiKnowledgeReply, getGeminiWebReply } from "@/lib/gemini";
-import { searchKnowledgeBase } from "@/lib/knowledgeBase";
 import { getMockTutorReply } from "@/lib/mockChat";
 import { isReplyLanguage, ReplyLanguage } from "@/lib/replyLanguage";
 
@@ -26,7 +24,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const knowledgeSearch = await searchKnowledgeBase(message);
+    let knowledgeSearch: {
+      matches: Array<{
+        fileName: string;
+        relativePath: string;
+        text: string;
+        score: number;
+      }>;
+      hasDocuments: boolean;
+      shouldUseKnowledge: boolean;
+    } = {
+      matches: [],
+      hasDocuments: false,
+      shouldUseKnowledge: false
+    };
+
+    try {
+      const { searchKnowledgeBase } = await import("@/lib/knowledgeBase");
+      knowledgeSearch = await searchKnowledgeBase(message);
+    } catch (error) {
+      console.error("Knowledge base load error:", error);
+    }
 
     if (!process.env.GEMINI_API_KEY) {
       const reply = await getMockTutorReply(message, replyLanguage);
@@ -38,8 +56,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    let geminiHelpers:
+      | typeof import("@/lib/gemini")
+      | null = null;
+
+    try {
+      geminiHelpers = await import("@/lib/gemini");
+    } catch (error) {
+      console.error("Gemini helper load error:", error);
+    }
+
+    if (!geminiHelpers) {
+      const reply = await getMockTutorReply(message, replyLanguage);
+
+      return NextResponse.json({
+        reply,
+        source: "mock-fallback",
+        knowledgeUsed: false
+      });
+    }
+
     if (knowledgeSearch.shouldUseKnowledge) {
-      const knowledgeReply = await getGeminiKnowledgeReply(
+      const knowledgeReply = await geminiHelpers.getGeminiKnowledgeReply(
         message,
         knowledgeSearch.matches,
         replyLanguage
@@ -55,7 +93,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const reply = await getGeminiWebReply(message, replyLanguage);
+    const reply = await geminiHelpers.getGeminiWebReply(
+      message,
+      replyLanguage
+    );
 
     if (!reply) {
       return NextResponse.json(
