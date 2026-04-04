@@ -426,7 +426,7 @@ export default function DashboardPage() {
               mockLogout();
               router.push("/login");
             }}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 self-stretch rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:self-auto"
           >
             <LogOut className="h-4 w-4" />
             Logout
