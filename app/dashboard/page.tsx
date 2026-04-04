@@ -49,6 +49,32 @@ const getInitials = (name: string) =>
     .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
 
+async function parseChatResponse(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  const rawBody = await response.text();
+
+  if (contentType.includes("application/json")) {
+    try {
+      return JSON.parse(rawBody) as {
+        error?: string;
+        reply?: string;
+      };
+    } catch {
+      throw new Error("The chat API returned invalid JSON.");
+    }
+  }
+
+  if (rawBody.startsWith("<!DOCTYPE") || rawBody.startsWith("<html")) {
+    throw new Error(
+      "The chat API returned an HTML page instead of JSON. This usually means the server is stale, the route failed, or the deployment does not have the API route wired correctly."
+    );
+  }
+
+  throw new Error(
+    rawBody.trim() || "The chat API returned an unexpected response."
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<MockStudentUser | null>(null);
@@ -266,10 +292,7 @@ export default function DashboardPage() {
           replyLanguage
         })
       });
-      const data = (await response.json()) as {
-        error?: string;
-        reply?: string;
-      };
+      const data = await parseChatResponse(response);
 
       if (!response.ok || !data.reply) {
         throw new Error(data.error || "Unable to fetch a reply right now.");
