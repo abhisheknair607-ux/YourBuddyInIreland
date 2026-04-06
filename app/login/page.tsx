@@ -5,6 +5,7 @@ import { Apple, ArrowLeft, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getProviders, signIn, useSession } from "next-auth/react";
 
 import { AnimatedGradientBackground } from "@/components/AnimatedGradientBackground";
 import { GoogleIcon } from "@/components/GoogleIcon";
@@ -14,8 +15,6 @@ import { PrivacyNotice } from "@/components/PrivacyNotice";
 import {
   getMockUser,
   hasAcceptedPrivacy,
-  mockLoginWithApple,
-  mockLoginWithGoogle,
   mockSendOtp,
   mockVerifyOtp,
   setPrivacyAccepted as persistPrivacyAccepted
@@ -23,8 +22,17 @@ import {
 
 type AuthMode = "login" | "signup";
 
+type AuthProviderMap = Record<
+  string,
+  {
+    id: string;
+    name: string;
+  }
+>;
+
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [mode, setMode] = useState<AuthMode>("login");
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
@@ -33,9 +41,17 @@ export default function LoginPage() {
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [busyAction, setBusyAction] = useState<"" | "google" | "apple" | "email">("");
+  const [configuredProviders, setConfiguredProviders] = useState<AuthProviderMap>(
+    {}
+  );
+  const [providersLoaded, setProvidersLoaded] = useState(false);
 
   useEffect(() => {
-    if (getMockUser()) {
+    if (status === "loading") {
+      return;
+    }
+
+    if (session?.user || getMockUser()) {
       router.replace("/dashboard");
       return;
     }
@@ -46,7 +62,33 @@ export default function LoginPage() {
     if (!accepted) {
       setPrivacyModalOpen(true);
     }
-  }, [router]);
+  }, [router, session, status]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void getProviders()
+      .then((providers) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setConfiguredProviders((providers ?? {}) as AuthProviderMap);
+        setProvidersLoaded(true);
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setConfiguredProviders({});
+        setProvidersLoaded(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const ensurePrivacyAccepted = () => {
     if (privacyAccepted) {
@@ -69,16 +111,18 @@ export default function LoginPage() {
       return;
     }
 
-    setBusyAction(provider);
-    setErrorMessage("");
-
-    if (provider === "google") {
-      await mockLoginWithGoogle();
-    } else {
-      await mockLoginWithApple();
+    if (!configuredProviders[provider]) {
+      setErrorMessage(
+        `${
+          provider === "google" ? "Google" : "Apple"
+        } sign-in is not configured yet. Add the provider credentials to enable it.`
+      );
+      return;
     }
 
-    router.push("/dashboard");
+    setBusyAction(provider);
+    setErrorMessage("");
+    await signIn(provider, { callbackUrl: "/dashboard" });
   };
 
   const handleEmailContinue = async () => {
@@ -101,14 +145,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-[100dvh] overflow-x-hidden">
       <AnimatedGradientBackground />
 
-      <PageTransition className="relative z-10 flex min-h-screen flex-col px-4 py-4 sm:px-6 sm:py-6">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between">
+      <PageTransition className="relative z-10 flex min-h-[100dvh] flex-col pt-safe">
+        <div className="page-shell flex flex-col gap-3 py-4 tablet:flex-row tablet:items-center tablet:justify-between tablet:py-5">
           <Link
             href="/"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 backdrop-blur-xl"
+            className="inline-flex min-h-[44px] items-center gap-2 self-start rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 backdrop-blur-xl"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to home
@@ -116,24 +160,24 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setPrivacyModalOpen(true)}
-            className="min-h-[44px] rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700"
+            className="min-h-[44px] self-stretch rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 tablet:self-auto"
           >
             Privacy Policy
           </button>
         </div>
 
-        <div className="mx-auto grid w-full max-w-7xl flex-1 gap-8 py-8 sm:gap-10 sm:py-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <div className="max-w-2xl space-y-7">
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700 backdrop-blur-xl">
+        <div className="page-shell grid flex-1 items-start gap-6 py-4 tablet:gap-8 tablet:py-6 laptop:grid-cols-[0.96fr_1.04fr] laptop:items-center laptop:gap-10 laptop:py-8">
+          <div className="order-2 max-w-2xl space-y-6 laptop:order-1 laptop:space-y-7">
+            <div className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700 backdrop-blur-xl">
               <ShieldCheck className="h-4 w-4" />
               Safe mock sign-in for your Ireland planning dashboard
             </div>
 
             <div>
-              <h1 className="text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl">
+              <h1 className="text-[2rem] font-semibold leading-tight text-slate-950 tablet:text-[2.5rem] laptop:text-[3.1rem]">
                 Sign in to organise your Ireland student journey.
               </h1>
-              <p className="mt-5 max-w-xl text-base leading-8 text-slate-600 sm:text-lg">
+              <p className="mt-4 max-w-[65ch] text-base leading-7 text-slate-600 tablet:mt-5 tablet:text-lg tablet:leading-8">
                 Google, Apple, and email OTP are mocked for now, but the UI is
                 structured for a real product that helps Indian students handle
                 visas, accommodation, loans, university shortlists, and course
@@ -141,7 +185,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 tablet:grid-cols-2">
               <div className="glass-card rounded-[1.75rem] p-5">
                 <p className="text-sm font-semibold text-slate-900">
                   Visa + document planning
@@ -163,15 +207,18 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <motion.div whileHover={{ y: -4 }} className="mx-auto w-full max-w-md lg:max-w-none">
-            <div className="glass-card surface-ring rounded-[2rem] p-5 transition sm:p-8">
+          <motion.div
+            whileHover={{ y: -4 }}
+            className="order-1 mx-auto w-full max-w-xl laptop:order-2 laptop:max-w-none"
+          >
+            <div className="glass-card surface-ring rounded-[2rem] p-5 transition tablet:p-6 laptop:p-8">
               <div className="mb-6 flex rounded-full border border-slate-200/80 bg-slate-50/80 p-1">
                 {(["login", "signup"] as const).map((option) => (
                   <button
                     key={option}
                     type="button"
                     onClick={() => setMode(option)}
-                    className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                    className={`min-h-[44px] flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                       mode === option
                         ? "bg-white text-slate-950 shadow-sm"
                         : "text-slate-500"
@@ -183,7 +230,7 @@ export default function LoginPage() {
               </div>
 
               <div className="mb-8">
-                <h2 className="text-3xl font-semibold text-slate-950">
+                <h2 className="text-[1.8rem] font-semibold leading-tight text-slate-950 tablet:text-3xl">
                   {mode === "login"
                     ? "Welcome back, Future Scholar"
                     : "Start your Ireland student journey"}
@@ -199,25 +246,39 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => void handleSocialLogin("google")}
-                  disabled={busyAction !== "" && busyAction !== "google"}
+                  disabled={
+                    !providersLoaded ||
+                    (busyAction !== "" && busyAction !== "google")
+                  }
                   className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-800 transition hover:scale-[1.01] hover:border-slate-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <GoogleIcon className="h-5 w-5" />
                   {busyAction === "google"
                     ? "Signing in..."
-                    : "Continue with Google"}
+                    : configuredProviders.google
+                      ? "Continue with Google"
+                      : providersLoaded
+                        ? "Google sign-in coming soon"
+                        : "Checking Google sign-in..."}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => void handleSocialLogin("apple")}
-                  disabled={busyAction !== "" && busyAction !== "apple"}
+                  disabled={
+                    !providersLoaded ||
+                    (busyAction !== "" && busyAction !== "apple")
+                  }
                   className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-800 transition hover:scale-[1.01] hover:border-slate-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Apple className="h-5 w-5" />
                   {busyAction === "apple"
                     ? "Signing in..."
-                    : "Continue with Apple"}
+                    : configuredProviders.apple
+                      ? "Continue with Apple"
+                      : providersLoaded
+                        ? "Apple sign-in coming soon"
+                        : "Checking Apple sign-in..."}
                 </button>
 
                 <div className="flex items-center gap-3 py-1">
@@ -285,11 +346,11 @@ export default function LoginPage() {
                   {errorMessage}
                 </p>
               ) : (
-                <p className="mt-4 text-sm leading-7 text-slate-500">
-                  Demo note: any email works, and the OTP is
+                <p className="mt-4 text-sm leading-7 text-slate-500 wrap-anywhere">
+                  Auth setup note: Google and Apple buttons will activate once
+                  their credentials are added. Email OTP still works as a demo,
+                  and the OTP is
                   <span className="font-semibold text-slate-700"> 123456</span>.
-                  After login, students land in a dashboard tailored to visa,
-                  housing, course, and loan questions.
                 </p>
               )}
             </div>

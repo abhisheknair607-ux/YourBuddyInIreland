@@ -134,14 +134,14 @@ export function OtpInput({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 backdrop-blur-md tablet:items-center tablet:p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.div
         key={shakeCount}
-        className="glass-card surface-ring relative w-full max-w-xl rounded-[2rem] p-6 sm:p-8"
+        className="glass-card surface-ring relative max-h-[calc(100dvh-1rem)] w-full max-w-xl overflow-y-auto rounded-[1.75rem] p-5 tablet:max-h-[85vh] tablet:rounded-[2rem] tablet:p-8"
         initial={{ opacity: 0, scale: 0.96, y: 16 }}
         animate={{
           opacity: 1,
@@ -154,13 +154,13 @@ export function OtpInput({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-full border border-slate-200/80 bg-white/90 p-2 text-slate-500 transition hover:text-slate-900"
+          className="absolute right-4 top-4 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-slate-200/80 bg-white/90 p-2 text-slate-500 transition hover:text-slate-900"
           aria-label="Close OTP modal"
         >
           <X className="h-4 w-4" />
         </button>
 
-        <div className="mb-6 flex items-center gap-3">
+        <div className="mb-6 flex flex-col items-center gap-3 text-center tablet:flex-row tablet:items-center tablet:text-left">
           <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
             <ShieldCheck className="h-6 w-6" />
           </div>
@@ -182,7 +182,7 @@ export function OtpInput({
           Demo timer: <span className="font-semibold">{formattedTime}</span>
         </div>
 
-        <div className="grid grid-cols-6 gap-2 sm:gap-3">
+        <div className="grid grid-cols-6 gap-2 tablet:gap-3">
           {digits.map((digit, index) => (
             <input
               key={`${index}-${shakeCount}`}
@@ -199,7 +199,7 @@ export function OtpInput({
                 event.preventDefault();
                 handlePaste(event.clipboardData.getData("text"));
               }}
-              className="h-12 w-full rounded-2xl border border-slate-200 bg-white text-center text-xl font-semibold text-slate-950 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.12)] sm:h-14"
+              className="h-12 w-full rounded-2xl border border-slate-200 bg-white text-center text-lg font-semibold text-slate-950 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.12)] tablet:h-14 tablet:text-xl"
             />
           ))}
         </div>
@@ -215,12 +215,12 @@ export function OtpInput({
           </p>
         )}
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-6 flex flex-col gap-3 tablet:flex-row">
           <button
             type="button"
             onClick={() => void handleVerify()}
             disabled={isSubmitting}
-            className="button-glow flex-1 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+            className="button-glow min-h-[44px] flex-1 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? "Verifying..." : "Verify & Continue"}
           </button>
@@ -228,7 +228,7 @@ export function OtpInput({
             type="button"
             onClick={() => void handleResend()}
             disabled={timeLeft > 0}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
+            className="flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-55"
           >
             <RefreshCcw className="h-4 w-4" />
             Resend OTP

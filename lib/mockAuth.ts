@@ -14,6 +14,20 @@ const delay = (ms: number) =>
     setTimeout(resolve, ms);
   });
 
+async function persistDemoUserRecord(user: MockStudentUser) {
+  try {
+    await fetch("/api/auth/mock-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(user)
+    });
+  } catch (error) {
+    console.error("Mock auth user save failed:", error);
+  }
+}
+
 const getStorage = () => {
   if (typeof window === "undefined") {
     return null;
@@ -118,13 +132,17 @@ export async function mockVerifyOtp(otp: string) {
 
   storage?.removeItem(PENDING_EMAIL_KEY);
 
+  const user = persistUser({
+    name: createDisplayName(email) || "Student User",
+    email,
+    privacyAccepted: hasAcceptedPrivacy()
+  });
+
+  await persistDemoUserRecord(user);
+
   return {
     success: true,
-    user: persistUser({
-      name: createDisplayName(email) || "Student User",
-      email,
-      privacyAccepted: hasAcceptedPrivacy()
-    })
+    user
   };
 }
 

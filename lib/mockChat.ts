@@ -12,6 +12,7 @@ export type TutorMessage = {
   id: string;
   role: TutorRole;
   content: string;
+  createdAt: string;
   source?: TutorMessageSource;
   documents?: string[];
 };
@@ -24,6 +25,7 @@ const delay = (ms: number) =>
 export const INITIAL_TUTOR_MESSAGE: TutorMessage = {
   id: "assistant-initial",
   role: "assistant",
+  createdAt: new Date().toISOString(),
   content:
     "Namaste! I'm here to help Indian students planning to study in Ireland. Ask me about visas, accommodation, education loans, universities, or course choices."
 };
@@ -36,6 +38,7 @@ export const createTutorMessage = (
   id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   role,
   content,
+  createdAt: new Date().toISOString(),
   source: metadata?.source,
   documents: metadata?.documents
 });

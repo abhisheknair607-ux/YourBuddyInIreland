@@ -6,6 +6,7 @@ node_modules
 Plan.txt
 .env.local
 .env.*.local
+data/auth-users.json
 dev-server.log
 dev-server.err.log
 dev-3002.log
@@ -16,3 +17,8 @@ prod-*.log
 prod-*.err.log
 dev-*.log
 dev-*.err.log
+localhostrun-*.log
+localhostrun-*.err.log
+localtunnel-*.log
+localtunnel-*.err.log
+start-preview-*.cmd

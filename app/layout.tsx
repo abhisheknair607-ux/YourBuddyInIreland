@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: true
+  userScalable: true,
+  viewportFit: "cover"
 };
 
 export default function RootLayout({
@@ -37,7 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="overflow-x-hidden">
       <body
-        className={`${inter.variable} ${poppins.variable} min-h-screen max-w-full overflow-x-hidden bg-slate-50 text-slate-950`}
+        className={`${inter.variable} ${poppins.variable} min-h-screen min-h-[100dvh] max-w-full overflow-x-hidden bg-slate-50 text-slate-950`}
       >
         <Providers>{children}</Providers>
       </body>

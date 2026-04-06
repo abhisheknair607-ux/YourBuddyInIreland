@@ -13,16 +13,20 @@ html {
   scroll-behavior: smooth;
   overflow-x: hidden;
   font-size: 16px;
+  height: 100%;
 }
 
 body {
+  margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.85), transparent 35%),
     linear-gradient(180deg, #fdfefe 0%, #f5f9ff 45%, #eef5ff 100%);
   color: #0f172a;
   font-family: var(--font-inter), sans-serif;
+  line-height: 1.5;
 }
 
 h1,
@@ -57,16 +61,42 @@ h4,
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   * {
     @apply border-slate-200/70;
+    min-width: 0;
   }
 
   body {
     @apply antialiased;
   }
+
+  img,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
 }
 
 @layer utilities {
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 tablet:px-6 wide:px-8;
+  }
+
   .glass-card {
     @apply border border-white/70 bg-white/70 backdrop-blur-xl;
     box-shadow: var(--card-shadow);
@@ -105,7 +135,16 @@ h4,
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
   .min-h-0-fix {
     min-height: 0;
+  }
+
+  .wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 }

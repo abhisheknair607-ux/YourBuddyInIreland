@@ -8,7 +8,13 @@ const config: Config = {
     "./styles/**/*.css"
   ],
   theme: {
-    extend: {}
+    extend: {
+      screens: {
+        tablet: "600px",
+        laptop: "900px",
+        wide: "1200px"
+      }
+    }
   },
   plugins: []
 };

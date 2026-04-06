@@ -1,6 +1,7 @@
 "use client";
 
 import { MotionConfig } from "framer-motion";
+import { SessionProvider } from "next-auth/react";
 import { ReactNode } from "react";
 
 type ProvidersProps = {
@@ -8,5 +9,9 @@ type ProvidersProps = {
 };
 
 export function Providers({ children }: ProvidersProps) {
-  return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
+  return (
+    <SessionProvider refetchOnWindowFocus={false}>
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+    </SessionProvider>
+  );
 }

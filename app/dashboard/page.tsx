@@ -1,18 +1,30 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import {
+  Banknote,
+  ChevronLeft,
+  ChevronRight,
+  FileCheck2,
+  Globe2,
+  GraduationCap,
+  Home,
+  House,
   LogOut,
-  MessageSquare,
+  Menu,
   Mic,
   MicOff,
+  Plus,
   Send,
   Sparkles,
   Volume2,
-  VolumeX
+  VolumeX,
+  X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import { signOut, useSession } from "next-auth/react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChatMessage } from "@/components/ChatMessage";
 import { PageTransition } from "@/components/PageTransition";
@@ -24,23 +36,63 @@ import {
   stopSpeaking
 } from "@/lib/browserSpeech";
 import {
-  INITIAL_TUTOR_MESSAGE,
   TutorMessage,
   TutorMessageSource,
   createTutorMessage
 } from "@/lib/mockChat";
-import { MockStudentUser, getMockUser, mockLogout } from "@/lib/mockAuth";
+import { getMockUser, mockLogout } from "@/lib/mockAuth";
 import {
   ReplyLanguage,
   replyLanguageOptions,
   replyLanguageProfiles
 } from "@/lib/replyLanguage";
 
-const quickPrompts = [
-  "What documents should I prepare first for an Ireland student visa?",
-  "Help me compare affordable student accommodation options near Dublin campuses",
-  "Which suits me better in Ireland: MSc Data Analytics or MSc Business Analytics?"
+const sidebarShortcuts: Array<{
+  title: string;
+  description: string;
+  prompt: string;
+  icon: LucideIcon;
+}> = [
+  {
+    title: "Visa checklist",
+    description: "Documents, SOP, finances",
+    prompt:
+      "Create a simple Ireland student visa checklist for me, with the documents I should prepare first.",
+    icon: FileCheck2
+  },
+  {
+    title: "Accommodation",
+    description: "Rent, commute, safe areas",
+    prompt:
+      "Help me compare student accommodation options in Ireland and tell me what I should check first.",
+    icon: House
+  },
+  {
+    title: "Universities",
+    description: "Compare city and career fit",
+    prompt:
+      "Help me shortlist universities in Ireland based on cost, location, and career outcomes.",
+    icon: GraduationCap
+  },
+  {
+    title: "Education loans",
+    description: "Budget and funding plan",
+    prompt:
+      "Help me understand how to plan education loans and living costs for studying in Ireland.",
+    icon: Banknote
+  }
 ];
+
+const landingPrompts = [
+  "Compare MSc Data Analytics options in Dublin and Limerick.",
+  "What documents do I need first for an Ireland student visa?",
+  "How should I shortlist affordable accommodation near campus?"
+];
+
+type DashboardUser = {
+  name: string;
+  email: string;
+};
 
 const getInitials = (name: string) =>
   name
@@ -49,6 +101,28 @@ const getInitials = (name: string) =>
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
+
+const getDisplayNameFromEmail = (email: string) =>
+  email
+    .split("@")[0]
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+function getSessionUser(sessionUser?: {
+  name?: string | null;
+  email?: string | null;
+}) {
+  if (!sessionUser?.email) {
+    return null;
+  }
+
+  return {
+    name: sessionUser.name?.trim() || getDisplayNameFromEmail(sessionUser.email),
+    email: sessionUser.email
+  } satisfies DashboardUser;
+}
 
 async function parseChatResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
@@ -80,14 +154,12 @@ async function parseChatResponse(response: Response) {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<MockStudentUser | null>(null);
+  const { data: session, status } = useSession();
+  const [user, setUser] = useState<DashboardUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [messages, setMessages] = useState<TutorMessage[]>([
-    INITIAL_TUTOR_MESSAGE
-  ]);
+  const [messages, setMessages] = useState<TutorMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [inputFocused, setInputFocused] = useState(false);
   const [chatError, setChatError] = useState("");
   const [voiceError, setVoiceError] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -96,6 +168,9 @@ export default function DashboardPage() {
   const [isVoiceOutputSupported, setIsVoiceOutputSupported] = useState(false);
   const [isVoiceRepliesEnabled, setIsVoiceRepliesEnabled] = useState(false);
   const [replyLanguage, setReplyLanguage] = useState<ReplyLanguage>("hinglish");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef("");
@@ -104,19 +179,40 @@ export default function DashboardPage() {
   const sendMessageRef = useRef<((messageText?: string) => Promise<void>) | null>(
     null
   );
-  const lastSpokenMessageIdRef = useRef(INITIAL_TUTOR_MESSAGE.id);
+  const lastSpokenMessageIdRef = useRef("");
 
   useEffect(() => {
     const mockUser = getMockUser();
+    const sessionUser = getSessionUser(session?.user);
 
-    if (!mockUser) {
+    if (status === "loading") {
+      if (mockUser) {
+        setUser({
+          name: mockUser.name,
+          email: mockUser.email
+        });
+        setIsCheckingAuth(false);
+      }
+      return;
+    }
+
+    const activeUser =
+      sessionUser ??
+      (mockUser
+        ? {
+            name: mockUser.name,
+            email: mockUser.email
+          }
+        : null);
+
+    if (!activeUser) {
       router.replace("/login");
       return;
     }
 
-    setUser(mockUser);
+    setUser(activeUser);
     setIsCheckingAuth(false);
-  }, [router]);
+  }, [router, session, status]);
 
   useEffect(() => {
     const chatContainer = chatScrollRef.current;
@@ -270,6 +366,47 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const hasConversation = messages.length > 0;
+
+  const sidebarGroups = useMemo(
+    () => [
+      {
+        title: "Quick actions",
+        items: sidebarShortcuts
+      }
+    ],
+    []
+  );
+
+  const beginNewChat = () => {
+    if (isListening && recognitionRef.current) {
+      suppressVoiceErrorRef.current = true;
+      shouldSubmitVoiceRef.current = false;
+      recognitionRef.current.abort();
+    }
+
+    stopSpeaking();
+    setMessages([]);
+    setDraft("");
+    setChatError("");
+    setVoiceError("");
+    setLiveTranscript("");
+    lastSpokenMessageIdRef.current = "";
+    setIsSidebarOpen(false);
+  };
+
+  const handleLogout = async () => {
+    mockLogout();
+    stopSpeaking();
+
+    if (session?.user) {
+      await signOut({ callbackUrl: "/login" });
+      return;
+    }
+
+    router.push("/login");
+  };
+
   const sendMessage = async (messageText?: string) => {
     const content = (messageText ?? draft).trim();
 
@@ -327,6 +464,21 @@ export default function DashboardPage() {
     }
   };
 
+  const handlePromptSend = async (prompt: string) => {
+    setIsSidebarOpen(false);
+    await sendMessage(prompt);
+  };
+
+  const cycleReplyLanguage = () => {
+    const currentIndex = replyLanguageOptions.findIndex(
+      (option) => option.value === replyLanguage
+    );
+    const nextOption =
+      replyLanguageOptions[(currentIndex + 1) % replyLanguageOptions.length];
+
+    setReplyLanguage(nextOption.value);
+  };
+
   const handleVoiceToggle = () => {
     if (!recognitionRef.current || isSending) {
       if (!isVoiceInputSupported) {
@@ -378,23 +530,223 @@ export default function DashboardPage() {
     await sendMessage();
   };
 
-  const handleKeyDown = async (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
+  const handleKeyDown = async (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       await sendMessage();
     }
   };
 
+  const renderSidebarContent = (compact: boolean) => {
+    const showLabels = !compact;
+
+    return (
+      <div className="flex h-full flex-col text-slate-700">
+        <div
+          className={`flex items-center border-b border-slate-200/80 px-4 py-4 ${
+            showLabels ? "justify-between" : "justify-center"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            title="Home"
+            className={`inline-flex h-10 items-center rounded-full border border-white/80 bg-white/80 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white ${
+              showLabels ? "gap-2 px-3" : "w-10 justify-center"
+            }`}
+          >
+            <Home className="h-4 w-4" />
+            {showLabels ? <span>Home</span> : null}
+          </button>
+
+          {showLabels ? (
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/80 text-slate-500 transition hover:border-slate-300 hover:bg-white laptop:hidden"
+              aria-label="Close sidebar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
+
+        <div className={`thin-scrollbar flex-1 overflow-y-auto ${showLabels ? "px-4 py-4" : "px-3 py-4"}`}>
+          <button
+            type="button"
+            onClick={beginNewChat}
+            title="New chat"
+            className={`inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 text-sm font-semibold text-white transition hover:scale-[1.01] ${
+              showLabels ? "w-full gap-2 px-4 py-3" : "h-11 w-full"
+            }`}
+          >
+            <Plus className="h-4 w-4" />
+            {showLabels ? <span>New chat</span> : null}
+          </button>
+
+          <div className="mt-5 space-y-6">
+            {sidebarGroups.map((group) => (
+              <section key={group.title}>
+                {showLabels ? (
+                  <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
+                    {group.title}
+                  </p>
+                ) : null}
+                <div className="space-y-2">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <button
+                        key={item.title}
+                        type="button"
+                        title={item.title}
+                        onClick={() => void handlePromptSend(item.prompt)}
+                        className={`flex rounded-2xl border border-slate-200/80 bg-white/70 text-left transition hover:border-slate-300 hover:bg-white ${
+                          showLabels
+                            ? "w-full items-start gap-3 px-3 py-3"
+                            : "h-12 w-full items-center justify-center"
+                        }`}
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        {showLabels ? (
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-900">
+                              {item.title}
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                              {item.description}
+                            </p>
+                          </div>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+
+            <section>
+              {showLabels ? (
+                <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
+                  Reply language
+                </p>
+              ) : null}
+              <div className={`flex ${showLabels ? "flex-wrap gap-2" : "flex-col gap-2"}`}>
+                {replyLanguageOptions.map((option) => {
+                  const isSelected = option.value === replyLanguage;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setReplyLanguage(option.value)}
+                      title={option.label}
+                      className={`rounded-full border text-xs font-semibold transition ${
+                        showLabels ? "px-3 py-2" : "h-10 w-full px-0"
+                      } ${
+                        isSelected
+                          ? "border-sky-300 bg-sky-50 text-sky-700"
+                          : "border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white"
+                      }`}
+                    >
+                      {showLabels ? option.label : option.label.slice(0, 1)}
+                    </button>
+                  );
+                })}
+              </div>
+              {showLabels ? (
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  {replyLanguageProfiles[replyLanguage].helperText}
+                </p>
+              ) : null}
+            </section>
+
+            <section>
+              {showLabels ? (
+                <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
+                  Voice replies
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={toggleVoiceReplies}
+                disabled={!isVoiceOutputSupported}
+                title={isVoiceRepliesEnabled ? "Spoken replies on" : "Spoken replies off"}
+                className={`flex rounded-2xl border transition disabled:cursor-not-allowed disabled:opacity-45 ${
+                  showLabels
+                    ? "w-full items-center justify-between px-3 py-3 text-left text-sm"
+                    : "h-12 w-full items-center justify-center"
+                } ${
+                  isVoiceRepliesEnabled
+                    ? "border-sky-300 bg-sky-50 text-sky-700"
+                    : "border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white"
+                }`}
+              >
+                {showLabels ? (
+                  <span>
+                    {isVoiceRepliesEnabled ? "Spoken replies on" : "Spoken replies off"}
+                  </span>
+                ) : null}
+                {isVoiceRepliesEnabled ? (
+                  <Volume2 className="h-4 w-4" />
+                ) : (
+                  <VolumeX className="h-4 w-4" />
+                )}
+              </button>
+            </section>
+          </div>
+        </div>
+
+        <div className={`border-t border-slate-200/80 ${showLabels ? "px-4 py-4" : "px-3 py-4"}`}>
+          <div
+            className={`rounded-2xl border border-white/80 bg-white/80 ${
+              showLabels
+                ? "flex items-center gap-3 px-3 py-3"
+                : "flex justify-center px-0 py-3"
+            }`}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-sm font-semibold text-white">
+              {getInitials(user?.name ?? "Student")}
+            </div>
+            {showLabels ? (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-slate-900">
+                  {user?.name ?? "Student"}
+                </p>
+                <p className="truncate text-xs text-slate-500">{user?.email}</p>
+              </div>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            title="Logout"
+            className={`mt-3 inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white ${
+              showLabels ? "h-11 w-full" : "h-11 w-full"
+            }`}
+          >
+            <LogOut className="h-4 w-4" />
+            {showLabels ? <span>Logout</span> : null}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (isCheckingAuth) {
     return (
-      <div className="flex h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-white to-sky-50 px-6">
-        <div className="glass-card rounded-[2rem] px-8 py-6 text-center">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-gradient-to-br from-white via-sky-50 to-blue-50 px-6">
+        <div className="glass-card rounded-[28px] px-8 py-7 text-center">
           <div className="mx-auto mb-4 h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-sky-500" />
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">
             Loading
           </p>
-          <h1 className="mt-2 text-xl font-semibold text-slate-950 sm:text-2xl">
-            Preparing your Ireland planning dashboard...
+          <h1 className="mt-2 text-xl font-semibold text-slate-950">
+            Opening your dashboard...
           </h1>
         </div>
       </div>
@@ -402,225 +754,285 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-br from-white via-sky-50 to-blue-50">
-      <PageTransition className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-4 sm:px-6 sm:py-6">
-        <header className="glass-card mb-4 flex shrink-0 flex-col gap-4 rounded-[2rem] p-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-[1.25rem] bg-gradient-to-br from-sky-500 to-indigo-600 text-lg font-semibold text-white">
-              {getInitials(user?.name ?? "Student")}
-            </div>
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">
-                Your Buddy In Ireland
-              </p>
-              <h1 className="mt-1 text-2xl font-semibold text-slate-950">
-                Welcome back, {user?.name?.split(" ")[0]}
-              </h1>
-              <p className="text-sm text-slate-500">{user?.email}</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              mockLogout();
-              router.push("/login");
-            }}
-            className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 self-stretch rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:self-auto"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </button>
-        </header>
-
-        <div className="flex min-h-0 flex-1 gap-4 lg:gap-6">
-          <aside className="glass-card thin-scrollbar hidden min-h-0 w-[280px] shrink-0 overflow-y-auto rounded-[2rem] p-5 lg:block xl:w-[300px]">
-            <div className="rounded-[1.75rem] bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 p-5 text-white">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-sky-100">
-                <Sparkles className="h-3.5 w-3.5" />
-                Ireland Journey Snapshot
-              </div>
-              <h2 className="mt-3 text-xl font-semibold leading-snug">
-                Plan your move with less confusion.
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-sky-50/90">
-                One calm assistant for visa, accommodation, loan, and course
-                questions - built for Indian students exploring Ireland.
-              </p>
-            </div>
-
-            <div className="mt-4 rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-4">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-sky-700" />
-                <p className="text-sm font-semibold text-slate-900">
-                  Try asking
-                </p>
-              </div>
-              <div className="thin-scrollbar mt-3 max-h-[18rem] space-y-2.5 overflow-y-auto pr-1">
-                {quickPrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => {
-                      setDraft(prompt);
-                    }}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-left text-sm leading-6 text-slate-700 transition hover:border-slate-300 hover:bg-white"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </aside>
-
-          <section className="glass-card flex min-h-0 flex-1 flex-col rounded-[2rem] p-3 sm:p-4">
-            <div className="min-h-0 flex-1 overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white/70">
-              <div
-                ref={chatScrollRef}
-                className="thin-scrollbar h-full overflow-y-auto px-4 py-4 sm:px-6 sm:py-6"
+    <div className="min-h-[100dvh] overflow-hidden bg-gradient-to-br from-white via-sky-50 to-blue-50 text-slate-950">
+      <PageTransition className="page-shell relative flex h-[100dvh] max-h-[100dvh] gap-3 py-3 pt-safe tablet:gap-4 tablet:py-4">
+        <AnimatePresence>
+          {isSidebarOpen ? (
+            <>
+              <motion.button
+                type="button"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setIsSidebarOpen(false)}
+                className="absolute inset-0 z-30 bg-slate-950/20 backdrop-blur-sm laptop:hidden"
+                aria-label="Close sidebar overlay"
+              />
+              <motion.aside
+                initial={{ x: -320, opacity: 0.4 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -320, opacity: 0.4 }}
+                transition={{ duration: 0.24, ease: "easeOut" }}
+                className="glass-card absolute inset-y-0 left-0 z-40 w-[286px] rounded-[2rem] border border-white/80 shadow-[0_24px_70px_rgba(15,23,42,0.14)] laptop:hidden"
               >
-                <div className="space-y-5">
-                  {messages.map((message) => (
-                    <ChatMessage key={message.id} message={message} />
-                  ))}
-                  {isSending ? <TypingIndicator /> : null}
+                {renderSidebarContent(false)}
+              </motion.aside>
+            </>
+          ) : null}
+        </AnimatePresence>
+
+        <aside
+          className={`glass-card surface-ring hidden h-full shrink-0 overflow-hidden rounded-[2rem] transition-all duration-300 laptop:block ${
+            isSidebarCollapsed ? "w-[88px]" : "w-[286px]"
+          }`}
+        >
+          {renderSidebarContent(isSidebarCollapsed)}
+        </aside>
+
+        <div className="glass-card surface-ring flex min-w-0 flex-1 flex-col overflow-hidden rounded-[2rem]">
+          <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200/80 px-3 tablet:px-4">
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/80 text-slate-600 transition hover:border-slate-300 hover:bg-white laptop:hidden"
+                aria-label="Open sidebar"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed((current) => !current)}
+                className="hidden h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/80 text-slate-600 transition hover:border-slate-300 hover:bg-white laptop:inline-flex"
+                aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {isSidebarCollapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+              </button>
+
+              <div className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-2">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-white">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <span className="truncate text-sm font-medium text-slate-700">
+                  Buddy Ireland
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={beginNewChat}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/80 text-slate-600 transition hover:border-slate-300 hover:bg-white"
+                aria-label="New chat"
+                title="New chat"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/80 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white laptop:hidden"
+                aria-label="Open profile and actions"
+                title={user?.name ?? "Student"}
+              >
+                {getInitials(user?.name ?? "Student")}
+              </button>
+
+              <div className="hidden items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1.5 laptop:flex">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-xs font-semibold text-white">
+                  {getInitials(user?.name ?? "Student")}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-800">
+                    {user?.name?.split(" ")[0]}
+                  </p>
                 </div>
               </div>
             </div>
+          </header>
 
-            <form onSubmit={handleSubmit} className="shrink-0 pb-safe pt-4">
-              {chatError ? (
-                <p className="mb-3 px-2 text-sm font-medium text-rose-600">
-                  {chatError}
-                </p>
-              ) : null}
-              {voiceError ? (
-                <p className="mb-3 px-2 text-sm font-medium text-amber-600">
-                  {voiceError}
-                </p>
-              ) : null}
+          <main className="flex min-h-0 flex-1 flex-col">
+            <div ref={chatScrollRef} className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
               <div
-                className={`rounded-[1.75rem] border border-slate-200 bg-white p-3 transition ${
-                  inputFocused ? "chat-input-focus" : ""
+                className={`mx-auto flex min-h-full w-full max-w-4xl flex-col px-3 pb-6 pt-4 tablet:px-6 ${
+                  hasConversation || isSending ? "" : "justify-center"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
+                {hasConversation || isSending ? (
+                  <div className="space-y-4 pb-32 pt-2 tablet:space-y-5">
+                    {messages.map((message) => (
+                      <ChatMessage key={message.id} message={message} />
+                    ))}
+                    {isSending ? <TypingIndicator /> : null}
+                  </div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="mx-auto flex w-full max-w-2xl flex-col items-center text-center"
+                  >
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-sky-100 to-indigo-100 text-sky-700 shadow-[0_24px_60px_rgba(59,130,246,0.15)]">
+                      <Sparkles className="h-7 w-7" />
+                    </div>
+                    <p className="mt-6 text-[11px] font-semibold uppercase tracking-[0.3em] text-[#94a8ff]">
+                      Your Buddy In Ireland
+                    </p>
+                    <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 tablet:text-[3.1rem]">
+                      How can I assist you?
+                    </h1>
+                    <p className="mt-4 max-w-xl text-sm leading-7 text-slate-500 tablet:text-base">
+                      Ask about visas, universities, accommodation, loans, and
+                      course decisions for studying in Ireland.
+                    </p>
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                      {landingPrompts.map((prompt) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          onClick={() => void handlePromptSend(prompt)}
+                          className="rounded-full border border-white/80 bg-white/80 px-4 py-2 text-sm text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+
+            <div className="shrink-0 px-3 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 tablet:px-6">
+              <div className="mx-auto w-full max-w-3xl">
+                {chatError ? (
+                  <p className="mb-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {chatError}
+                  </p>
+                ) : null}
+                {voiceError ? (
+                  <p className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    {voiceError}
+                  </p>
+                ) : null}
+
+                <form
+                  onSubmit={handleSubmit}
+                  className="surface-ring rounded-[30px] border border-white/80 bg-white/85 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.12)]"
+                >
+                  <textarea
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     onKeyDown={(event) => void handleKeyDown(event)}
-                    onFocus={() => setInputFocused(true)}
-                    onBlur={() => setInputFocused(false)}
-                    placeholder="Ask about Ireland student visas, accommodation, education loans, universities, or course choices..."
-                    className="h-12 flex-1 rounded-2xl bg-transparent px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                    rows={1}
+                    placeholder="Message Your Buddy In Ireland"
+                    className="min-h-[52px] w-full resize-none bg-transparent px-3 py-2 text-base text-slate-900 outline-none placeholder:text-slate-400"
                   />
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: isVoiceInputSupported ? 1.03 : 1 }}
-                    whileTap={{ scale: isVoiceInputSupported ? 0.97 : 1 }}
-                    onClick={handleVoiceToggle}
-                    disabled={!isVoiceInputSupported || isSending}
-                    className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl border text-sm font-semibold transition ${
-                      isListening
-                        ? "border-rose-200 bg-rose-50 text-rose-600 shadow-[0_12px_30px_rgba(244,63,94,0.18)]"
-                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white"
-                    } disabled:cursor-not-allowed disabled:opacity-45`}
-                    aria-label={isListening ? "Stop voice input" : "Start voice input"}
-                    title={
-                      isVoiceInputSupported
-                        ? isListening
-                          ? "Stop and send voice question"
-                          : "Start voice input"
-                        : "Voice input works in supported browsers like Chrome"
-                    }
-                  >
-                    {isListening ? (
-                      <MicOff className="h-4 w-4" />
-                    ) : (
-                      <Mic className="h-4 w-4" />
-                    )}
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: isVoiceOutputSupported ? 1.03 : 1 }}
-                    whileTap={{ scale: isVoiceOutputSupported ? 0.97 : 1 }}
-                    onClick={toggleVoiceReplies}
-                    disabled={!isVoiceOutputSupported}
-                    className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl border text-sm font-semibold transition ${
-                      isVoiceRepliesEnabled
-                        ? "border-sky-200 bg-sky-50 text-sky-700 shadow-[0_12px_30px_rgba(59,130,246,0.14)]"
-                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white"
-                    } disabled:cursor-not-allowed disabled:opacity-45`}
-                    aria-label={
-                      isVoiceRepliesEnabled
-                        ? "Mute spoken replies"
-                        : "Enable spoken replies"
-                    }
-                    title={
-                      isVoiceOutputSupported
-                        ? isVoiceRepliesEnabled
-                          ? "Mute spoken replies"
-                          : "Read assistant replies aloud"
-                        : "Speech playback is not supported in this browser"
-                    }
-                  >
-                    {isVoiceRepliesEnabled ? (
-                      <Volume2 className="h-4 w-4" />
-                    ) : (
-                      <VolumeX className="h-4 w-4" />
-                    )}
-                  </motion.button>
-                  <motion.button
-                    type="submit"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    disabled={!draft.trim() || isSending}
-                    className="button-glow inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    <Send className="h-4 w-4" />
-                    Send
-                  </motion.button>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2 px-2">
-                  {replyLanguageOptions.map((option) => {
-                    const isSelected = option.value === replyLanguage;
 
-                    return (
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
                       <button
-                        key={option.value}
                         type="button"
-                        onClick={() => setReplyLanguage(option.value)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                          isSelected
-                            ? "border-sky-300 bg-sky-50 text-sky-700"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white"
-                        }`}
+                        onClick={cycleReplyLanguage}
+                        className="inline-flex h-11 min-w-[44px] items-center justify-center rounded-full border border-white/80 bg-white px-3 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                        title={`Reply language: ${replyLanguageProfiles[replyLanguage].label}`}
+                        aria-label={`Reply language: ${replyLanguageProfiles[replyLanguage].label}`}
                       >
-                        {option.label}
+                        <Globe2 className="h-4 w-4" />
+                        <span className="ml-2 hidden text-xs font-medium tablet:inline">
+                          {replyLanguageProfiles[replyLanguage].label}
+                        </span>
                       </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex flex-col gap-2 px-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                  <p>
-                    {isVoiceInputSupported
-                      ? isListening
-                        ? `Listening now${liveTranscript ? `: "${liveTranscript}"` : "..."}`
-                        : `Voice mode: ${replyLanguageProfiles[replyLanguage].helperText}`
-                      : "Voice input is unavailable in this browser. Chrome works best for this mode."}
-                  </p>
-                  <p>
-                    {isVoiceOutputSupported
-                      ? isVoiceRepliesEnabled
-                        ? "Spoken replies are on."
-                        : "Spoken replies are off."
-                      : "Spoken replies are unavailable here."}
-                  </p>
-                </div>
+
+                      <button
+                        type="button"
+                        onClick={handleVoiceToggle}
+                        disabled={!isVoiceInputSupported || isSending}
+                        className={`inline-flex h-11 min-w-[44px] items-center justify-center rounded-full border px-3 transition ${
+                          isListening
+                            ? "border-rose-200 bg-rose-50 text-rose-600"
+                            : "border-white/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        } disabled:cursor-not-allowed disabled:opacity-45`}
+                        aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                        title={
+                          isVoiceInputSupported
+                            ? isListening
+                              ? "Stop and send voice question"
+                              : "Start voice input"
+                            : "Voice input works best in Chrome"
+                        }
+                      >
+                        {isListening ? (
+                          <MicOff className="h-4 w-4" />
+                        ) : (
+                          <Mic className="h-4 w-4" />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={toggleVoiceReplies}
+                        disabled={!isVoiceOutputSupported}
+                        className={`hidden h-11 min-w-[44px] items-center justify-center rounded-full border px-3 transition min-[380px]:inline-flex ${
+                          isVoiceRepliesEnabled
+                            ? "border-sky-300 bg-sky-50 text-sky-700"
+                            : "border-white/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        } disabled:cursor-not-allowed disabled:opacity-45`}
+                        aria-label={
+                          isVoiceRepliesEnabled
+                            ? "Mute spoken replies"
+                            : "Enable spoken replies"
+                        }
+                        title={
+                          isVoiceRepliesEnabled
+                            ? "Mute spoken replies"
+                            : "Read assistant replies aloud"
+                        }
+                      >
+                        {isVoiceRepliesEnabled ? (
+                          <Volume2 className="h-4 w-4" />
+                        ) : (
+                          <VolumeX className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={!draft.trim() || isSending}
+                      className="inline-flex h-12 min-w-[48px] items-center justify-center rounded-full bg-[#4e67dd] px-4 text-white transition hover:bg-[#6077e7] disabled:cursor-not-allowed disabled:opacity-45"
+                      aria-label="Send message"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="mt-3 flex flex-col gap-1 px-1 text-[11px] leading-5 text-slate-500 tablet:flex-row tablet:items-center tablet:justify-between">
+                    <p>
+                      {isListening
+                        ? liveTranscript
+                          ? `Listening: "${liveTranscript}"`
+                          : "Listening..."
+                        : replyLanguageProfiles[replyLanguage].helperText}
+                    </p>
+                    <p className="hidden tablet:block">
+                      {isVoiceRepliesEnabled
+                        ? "Spoken replies on"
+                        : "Spoken replies off"}
+                    </p>
+                  </div>
+                </form>
               </div>
-            </form>
-          </section>
+            </div>
+          </main>
         </div>
       </PageTransition>
     </div>

@@ -5,6 +5,19 @@ import { isReplyLanguage, ReplyLanguage } from "@/lib/replyLanguage";
 
 export const runtime = "nodejs";
 
+function getApiErrorStatus(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    typeof (error as { status?: unknown }).status === "number"
+  ) {
+    return (error as { status: number }).status;
+  }
+
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
@@ -112,6 +125,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Chat route error:", error);
+
+    const status = getApiErrorStatus(error);
+
+    if (status === 429) {
+      return NextResponse.json(
+        {
+          error:
+            "The current Gemini request limit for this key has been reached. Please try again shortly."
+        },
+        { status: 429 }
+      );
+    }
 
     return NextResponse.json(
       { error: "Unable to fetch a reply right now." },

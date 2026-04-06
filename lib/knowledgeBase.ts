@@ -1,11 +1,13 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { pathToFileURL } from "url";
 
 const KNOWLEDGE_DIR = path.join(process.cwd(), "knowledge");
 const SUPPORTED_EXTENSIONS = new Set([".pdf", ".docx", ".md", ".txt"]);
 const MAX_RESULTS = 6;
 const CHUNK_SIZE = 1400;
 const CHUNK_OVERLAP = 220;
+const MIN_USEFUL_SCORE = 8;
 
 type KnowledgeChunk = {
   id: string;
@@ -75,6 +77,16 @@ function chunkText(text: string) {
 async function readPdf(filePath: string) {
   const { PDFParse } = await import("pdf-parse");
   const buffer = await fs.readFile(filePath);
+  const workerPath = path.join(
+    process.cwd(),
+    "node_modules",
+    "pdf-parse",
+    "dist",
+    "worker",
+    "pdf.worker.mjs"
+  );
+
+  PDFParse.setWorker(pathToFileURL(workerPath).toString());
   const parser = new PDFParse({ data: buffer });
 
   try {
@@ -120,6 +132,7 @@ async function listKnowledgeFiles() {
     return entries
       .filter((entry) => entry.isFile())
       .map((entry) => entry.name)
+      .filter((name) => !/^readme(\.[^.]+)?$/i.test(name))
       .filter((name) => SUPPORTED_EXTENSIONS.has(path.extname(name).toLowerCase()))
       .sort();
   } catch {
@@ -239,7 +252,7 @@ export async function searchKnowledgeBase(query: string) {
     .slice(0, MAX_RESULTS);
 
   const shouldUseKnowledge =
-    rankedMatches.length > 0;
+    rankedMatches.length > 0 && (rankedMatches[0]?.score ?? 0) >= MIN_USEFUL_SCORE;
 
   return {
     matches: rankedMatches,
