@@ -109,34 +109,6 @@ export default function HomePage() {
                 ]}
               />
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.2 }}
-              className="flex flex-col gap-4"
-            >
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Link
-                  href="/login"
-                  className="button-glow inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white tablet:w-auto"
-                >
-                  Start Planning
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </motion.div>
-
-              <div className="grid grid-cols-2 gap-3 tablet:grid-cols-3 laptop:grid-cols-6">
-                {subjects.map((subject) => (
-                  <span
-                    key={subject}
-                    className="glass-card flex min-h-[44px] items-center justify-center rounded-[1.25rem] px-3 py-3 text-center text-sm font-medium text-slate-700"
-                  >
-                    {subject}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
           </div>
 
           {/* Right column - preview card */}
@@ -144,7 +116,7 @@ export default function HomePage() {
             initial={{ opacity: 0, x: 30, y: 16 }}
             animate={{ opacity: 1, x: 0, y: 0 }}
             transition={{ duration: 0.65, delay: 0.12 }}
-            className="w-full laptop:max-w-[48%]"
+            className="flex w-full flex-col gap-4 laptop:max-w-[48%] tablet:gap-5"
           >
             <div className="glass-card surface-ring rounded-[2rem] p-4 tablet:p-5">
               <div className="mb-4 flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between">
@@ -177,6 +149,47 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.2 }}
+              className="glass-card rounded-[1.75rem] p-4 tablet:p-5"
+            >
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
+                      Start with a plan
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      Pick the part of the Ireland journey you want to sort out first.
+                    </p>
+                  </div>
+
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Link
+                      href="/login"
+                      className="button-glow inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white tablet:w-auto"
+                    >
+                      Start Planning
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </motion.div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 tablet:grid-cols-3">
+                  {subjects.map((subject) => (
+                    <span
+                      key={subject}
+                      className="flex min-h-[44px] items-center justify-center rounded-[1.25rem] border border-slate-200/80 bg-slate-50/90 px-3 py-3 text-center text-sm font-medium text-slate-700"
+                    >
+                      {subject}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         </section>
 

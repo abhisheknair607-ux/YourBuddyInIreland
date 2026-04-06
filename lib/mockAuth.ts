@@ -9,6 +9,17 @@ const PENDING_EMAIL_KEY = "mockPendingEmail";
 const PRIVACY_ACCEPTED_KEY = "mockPrivacyAccepted";
 const DEMO_OTP = "123456";
 
+function getDeploymentHeaders() {
+  const deploymentId = process.env.NEXT_PUBLIC_DEPLOYMENT_ID;
+  const headers: Record<string, string> = {};
+
+  if (deploymentId) {
+    headers["x-deployment-id"] = deploymentId;
+  }
+
+  return headers;
+}
+
 const delay = (ms: number) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -19,7 +30,8 @@ async function persistDemoUserRecord(user: MockStudentUser) {
     await fetch("/api/auth/mock-user", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        ...getDeploymentHeaders()
       },
       body: JSON.stringify(user)
     });

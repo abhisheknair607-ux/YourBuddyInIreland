@@ -22,3 +22,5 @@ localhostrun-*.err.log
 localtunnel-*.log
 localtunnel-*.err.log
 start-preview-*.cmd
+auth-start*.log
+localhost-*.log

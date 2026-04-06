@@ -7,6 +7,8 @@
   --bg-secondary: #ebf4ff;
   --card-shadow: 0 24px 80px rgba(15, 23, 42, 0.12);
   --glow-blue: 0 16px 40px rgba(59, 130, 246, 0.22);
+  --font-inter: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-poppins: Poppins, Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 html {
@@ -25,7 +27,7 @@ body {
     radial-gradient(circle at top, rgba(255, 255, 255, 0.85), transparent 35%),
     linear-gradient(180deg, #fdfefe 0%, #f5f9ff 45%, #eef5ff 100%);
   color: #0f172a;
-  font-family: var(--font-inter), sans-serif;
+  font-family: var(--font-inter);
   line-height: 1.5;
 }
 
@@ -34,7 +36,7 @@ h2,
 h3,
 h4,
 .font-heading {
-  font-family: var(--font-poppins), var(--font-inter), sans-serif;
+  font-family: var(--font-poppins);
 }
 
 ::selection {

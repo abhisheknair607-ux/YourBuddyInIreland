@@ -7,6 +7,20 @@ import {
 import { ReplyLanguage, replyLanguageProfiles } from "@/lib/replyLanguage";
 
 const MODEL_NAME = "gemini-2.5-flash";
+const DUBLIN_AREA_MAPS = [
+  {
+    label: "Student map",
+    url: "https://www.google.com/maps/d/viewer?mid=1ObFwqV2vtigkclpjea3sUHNhUuw&ll=53.291859560190396%2C-6.18664934077243&z=13"
+  },
+  {
+    label: "Accommodation map",
+    url: "https://www.google.com/maps/d/viewer?mid=12P4oVY7A4w538meuFJUEEuMIJ1paCuE8&ll=53.28668449709923%2C-6.158606121728503&z=12"
+  },
+  {
+    label: "Area demarcation map",
+    url: "https://www.google.com/maps/d/viewer?mid=1ObFwqV2vtigkclpjea3sUHNhUuw&ll=53.32837264518767%2C-6.201412219190399&z=13"
+  }
+] as const;
 
 const SYSTEM_PROMPT = `
 You are Your Buddy In Ireland, a study assistant for Indian students.
@@ -108,6 +122,57 @@ function appendWebSourceList(text: string, urls: string[]) {
     .join("\n")}`.trim();
 }
 
+function isDublinAreaQuestion(message: string) {
+  const normalizedMessage = message.toLowerCase();
+  const mentionsDublin = normalizedMessage.includes("dublin");
+  const areaKeywords = [
+    "area",
+    "areas",
+    "neighbourhood",
+    "neighborhood",
+    "desirable",
+    "desirability",
+    "safe",
+    "safety",
+    "where should i live",
+    "where to live",
+    "best place",
+    "best area",
+    "commute",
+    "rent",
+    "accommodation",
+    "stay",
+    "staying"
+  ];
+
+  return mentionsDublin && areaKeywords.some((keyword) => normalizedMessage.includes(keyword));
+}
+
+function getDublinAreaInstruction(message: string) {
+  if (!isDublinAreaQuestion(message)) {
+    return "";
+  }
+
+  return `
+For Dublin area desirability, neighbourhood, rent, safety, commute, or accommodation questions, use these shared planning maps as important user-provided context:
+- Student map: ${DUBLIN_AREA_MAPS[0].url}
+- Accommodation map: ${DUBLIN_AREA_MAPS[1].url}
+ - Area demarcation map: ${DUBLIN_AREA_MAPS[2].url}
+Use them to guide area comparisons alongside official and trusted sources.
+If relevant, mention them briefly as helpful planning maps at the end of the answer.
+  `.trim();
+}
+
+function appendHelpfulMapLinks(text: string, message: string) {
+  if (!isDublinAreaQuestion(message)) {
+    return text.trim();
+  }
+
+  return `${text.trim()}\n\n**Helpful Maps:**\n${DUBLIN_AREA_MAPS.map(
+    (map) => `- [${map.label}](${map.url})`
+  ).join("\n")}`.trim();
+}
+
 export async function getGeminiKnowledgeReply(
   message: string,
   knowledgeMatches: Array<{
@@ -185,6 +250,7 @@ export async function getGeminiWebReply(
     contents: `${withFormattingRules(
       `
 ${getReplyLanguageInstruction(replyLanguage)}
+${getDublinAreaInstruction(message)}
 
 Use Google Search only when needed for accurate and current information.
 Prefer practical answers for Indian students planning to study in Ireland.
@@ -222,5 +288,8 @@ Use other websites only if the preferred sites do not contain the needed answer.
     return null;
   }
 
-  return appendWebSourceList(text, getGroundingSourceLinks(response));
+  return appendWebSourceList(
+    appendHelpfulMapLinks(text, message),
+    getGroundingSourceLinks(response)
+  );
 }

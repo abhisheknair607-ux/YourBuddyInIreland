@@ -1,8 +1,12 @@
 import { promises as fs } from "fs";
+import os from "os";
 import path from "path";
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const AUTH_USERS_FILE = path.join(DATA_DIR, "auth-users.json");
+const TMP_DATA_DIR = path.join(os.tmpdir(), "your-buddy-in-ireland");
+const AUTH_USERS_FILE = process.env.NETLIFY
+  ? path.join(TMP_DATA_DIR, "auth-users.json")
+  : path.join(DATA_DIR, "auth-users.json");
 
 export type SavedAuthUser = {
   id: string;
@@ -17,7 +21,7 @@ export type SavedAuthUser = {
 };
 
 async function ensureStoreFile() {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  await fs.mkdir(path.dirname(AUTH_USERS_FILE), { recursive: true });
 
   try {
     await fs.access(AUTH_USERS_FILE);
@@ -79,11 +83,19 @@ export async function saveAuthUser(details: {
     users.unshift(nextUser);
   }
 
-  await writeUsers(users);
+  try {
+    await writeUsers(users);
+  } catch (error) {
+    console.warn("Auth user store is unavailable for persistent writes.", error);
+  }
 
   return nextUser;
 }
 
 export async function listSavedAuthUsers() {
-  return readUsers();
+  try {
+    return await readUsers();
+  } catch {
+    return [];
+  }
 }

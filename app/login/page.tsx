@@ -16,6 +16,7 @@ import {
   getMockUser,
   hasAcceptedPrivacy,
   mockSendOtp,
+  mockLogout,
   mockVerifyOtp,
   setPrivacyAccepted as persistPrivacyAccepted
 } from "@/lib/mockAuth";
@@ -51,9 +52,13 @@ export default function LoginPage() {
       return;
     }
 
-    if (session?.user || getMockUser()) {
+    if (session?.user) {
       router.replace("/dashboard");
       return;
+    }
+
+    if (getMockUser()) {
+      mockLogout();
     }
 
     const accepted = hasAcceptedPrivacy();
@@ -178,10 +183,10 @@ export default function LoginPage() {
                 Sign in to organise your Ireland student journey.
               </h1>
               <p className="mt-4 max-w-[65ch] text-base leading-7 text-slate-600 tablet:mt-5 tablet:text-lg tablet:leading-8">
-                Google, Apple, and email OTP are mocked for now, but the UI is
-                structured for a real product that helps Indian students handle
-                visas, accommodation, loans, university shortlists, and course
-                choices for Ireland.
+                Sign in with Google for the real auth flow, or use the demo
+                email OTP while the rest of the product keeps taking shape for
+                Indian students planning visas, accommodation, loans,
+                university shortlists, and course choices in Ireland.
               </p>
             </div>
 
@@ -236,9 +241,9 @@ export default function LoginPage() {
                     : "Start your Ireland student journey"}
                 </h2>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Sign in with a mock provider now. Real Google, Apple, and
-                  email OTP can be wired in later without changing this page
-                  layout or the flow students already understand.
+                  Use your Google account to create or access your account.
+                  Apple can be connected next, and email OTP remains available
+                  as a demo fallback on this screen.
                 </p>
               </div>
 
@@ -347,9 +352,9 @@ export default function LoginPage() {
                 </p>
               ) : (
                 <p className="mt-4 text-sm leading-7 text-slate-500 wrap-anywhere">
-                  Auth setup note: Google and Apple buttons will activate once
-                  their credentials are added. Email OTP still works as a demo,
-                  and the OTP is
+                  Auth setup note: Google is ready when its credentials are
+                  configured. Apple can be added next. Email OTP still works as
+                  a demo, and the OTP is
                   <span className="font-semibold text-slate-700"> 123456</span>.
                 </p>
               )}
