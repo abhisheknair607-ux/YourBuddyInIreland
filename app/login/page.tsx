@@ -1,13 +1,14 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Apple, ArrowLeft, Mail, ShieldCheck } from "lucide-react";
+import { Apple, Mail, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getProviders, signIn, useSession } from "next-auth/react";
 
 import { AnimatedGradientBackground } from "@/components/AnimatedGradientBackground";
+import { BrandLogo } from "@/components/BrandLogo";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { OtpInput } from "@/components/OtpInput";
 import { PageTransition } from "@/components/PageTransition";
@@ -31,6 +32,34 @@ type AuthProviderMap = Record<
   }
 >;
 
+const LOCAL_HOST_PATTERNS = [/^localhost$/i, /^127(?:\.\d{1,3}){3}$/, /^192\.168(?:\.\d{1,3}){2}$/, /^10(?:\.\d{1,3}){3}$/];
+
+function isLocalPreviewHost() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const { hostname } = window.location;
+
+  if (hostname === "::1") {
+    return true;
+  }
+
+  if (LOCAL_HOST_PATTERNS.some((pattern) => pattern.test(hostname))) {
+    return true;
+  }
+
+  const private172Match = hostname.match(/^172\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+
+  if (!private172Match) {
+    return false;
+  }
+
+  const secondOctet = Number(private172Match[1]);
+
+  return secondOctet >= 16 && secondOctet <= 31;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -46,6 +75,7 @@ export default function LoginPage() {
     {}
   );
   const [providersLoaded, setProvidersLoaded] = useState(false);
+  const [localGuestEnabled, setLocalGuestEnabled] = useState(false);
 
   useEffect(() => {
     if (status === "loading") {
@@ -93,6 +123,10 @@ export default function LoginPage() {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    setLocalGuestEnabled(isLocalPreviewHost());
   }, []);
 
   const ensurePrivacyAccepted = () => {
@@ -149,6 +183,14 @@ export default function LoginPage() {
     setOtpModalOpen(true);
   };
 
+  const handleGuestContinue = () => {
+    if (!ensurePrivacyAccepted()) {
+      return;
+    }
+
+    router.push("/dashboard");
+  };
+
   return (
     <div className="relative min-h-[100dvh] overflow-x-hidden">
       <AnimatedGradientBackground />
@@ -157,10 +199,9 @@ export default function LoginPage() {
         <div className="page-shell flex flex-col gap-3 py-4 tablet:flex-row tablet:items-center tablet:justify-between tablet:py-5">
           <Link
             href="/"
-            className="inline-flex min-h-[44px] items-center gap-2 self-start rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 backdrop-blur-xl"
+            className="inline-flex min-h-[44px] items-center self-start rounded-[1.4rem] border border-white/70 bg-white/80 px-3 py-2 backdrop-blur-xl transition hover:border-slate-300 hover:bg-white"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to home
+            <BrandLogo size="sm" className="w-[132px] tablet:w-[150px]" />
           </Link>
           <button
             type="button"
@@ -295,17 +336,30 @@ export default function LoginPage() {
                 </div>
 
                 {!emailFormOpen ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmailFormOpen(true);
-                      setErrorMessage("");
-                    }}
-                    className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-800 transition hover:scale-[1.01] hover:border-slate-300 hover:bg-white"
-                  >
-                    <Mail className="h-5 w-5" />
-                    Continue with Email
-                  </button>
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmailFormOpen(true);
+                        setErrorMessage("");
+                      }}
+                      className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-800 transition hover:scale-[1.01] hover:border-slate-300 hover:bg-white"
+                    >
+                      <Mail className="h-5 w-5" />
+                      Continue with Email
+                    </button>
+
+                    {localGuestEnabled ? (
+                      <button
+                        type="button"
+                        onClick={handleGuestContinue}
+                        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm font-semibold text-sky-800 transition hover:scale-[1.01] hover:border-sky-300 hover:bg-white"
+                      >
+                        <ShieldCheck className="h-5 w-5" />
+                        Continue as guest
+                      </button>
+                    ) : null}
+                  </div>
                 ) : (
                   <div className="rounded-[1.75rem] border border-slate-200/80 bg-slate-50/80 p-4">
                     <label className="text-sm font-semibold text-slate-700">

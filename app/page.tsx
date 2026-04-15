@@ -3,26 +3,25 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AnimatedGradientBackground } from "@/components/AnimatedGradientBackground";
+import { BrandLogo } from "@/components/BrandLogo";
 import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { IntroScreen } from "@/components/IntroScreen";
 import { PageTransition } from "@/components/PageTransition";
 import { PrivacyNotice } from "@/components/PrivacyNotice";
 import { TypewriterText } from "@/components/TypewriterText";
 import { hasAcceptedPrivacy } from "@/lib/mockAuth";
-
-const subjects = [
-  "Visa steps",
-  "Universities",
-  "Courses",
-  "Accommodation",
-  "Education loans",
-  "Hinglish support"
-];
+import {
+  DASHBOARD_STARTER_PROMPT_KEY,
+  DEFAULT_STARTER_PROMPT,
+  HOME_STARTER_PROMPTS
+} from "@/lib/starterPrompts";
 
 export default function HomePage() {
+  const router = useRouter();
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   useEffect(() => {
@@ -30,6 +29,14 @@ export default function HomePage() {
       setIsPrivacyOpen(true);
     }
   }, []);
+
+  const openStarterChat = (prompt: string) => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(DASHBOARD_STARTER_PROMPT_KEY, prompt);
+    }
+
+    router.push("/dashboard");
+  };
 
   return (
     <div className="relative min-h-[100dvh] overflow-x-hidden">
@@ -42,12 +49,9 @@ export default function HomePage() {
         <header className="page-shell flex shrink-0 flex-col gap-3 py-4 tablet:flex-row tablet:items-center tablet:justify-between tablet:py-5">
           <Link
             href="/"
-            className="inline-flex min-h-[44px] items-center gap-3 self-start rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 backdrop-blur-xl"
+            className="inline-flex min-h-[44px] items-center self-start rounded-[1.4rem] border border-white/70 bg-white/80 px-3 py-2 backdrop-blur-xl transition hover:border-slate-300 hover:bg-white"
           >
-            <div className="rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 p-2 text-white">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            Your Buddy In Ireland
+            <BrandLogo size="sm" priority className="w-[132px] tablet:w-[150px]" />
           </Link>
           <Link
             href="/login"
@@ -168,24 +172,27 @@ export default function HomePage() {
                   </div>
 
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Link
-                      href="/login"
+                    <button
+                      type="button"
+                      onClick={() => openStarterChat(DEFAULT_STARTER_PROMPT)}
                       className="button-glow inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white tablet:w-auto"
                     >
                       Start Planning
                       <ArrowRight className="h-4 w-4" />
-                    </Link>
+                    </button>
                   </motion.div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 tablet:grid-cols-3">
-                  {subjects.map((subject) => (
-                    <span
-                      key={subject}
-                      className="flex min-h-[44px] items-center justify-center rounded-[1.25rem] border border-slate-200/80 bg-slate-50/90 px-3 py-3 text-center text-sm font-medium text-slate-700"
+                  {HOME_STARTER_PROMPTS.map((subject) => (
+                    <button
+                      key={subject.label}
+                      type="button"
+                      onClick={() => openStarterChat(subject.prompt)}
+                      className="flex min-h-[44px] items-center justify-center rounded-[1.25rem] border border-slate-200/80 bg-slate-50/90 px-3 py-3 text-center text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
                     >
-                      {subject}
-                    </span>
+                      {subject.label}
+                    </button>
                   ))}
                 </div>
               </div>

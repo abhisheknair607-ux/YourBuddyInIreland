@@ -1,4 +1,8 @@
-import type { ReplyLanguage } from "@/lib/replyLanguage";
+import {
+  getMockReplyLanguage,
+  type MockReplyLanguage,
+  type ReplyLanguage
+} from "@/lib/replyLanguage";
 
 export type TutorRole = "user" | "assistant";
 export type TutorMessageSource =
@@ -51,7 +55,9 @@ function selectLocalizedReply(
     hindi: string;
   }
 ) {
-  return content[replyLanguage];
+  const mockLanguage: MockReplyLanguage = getMockReplyLanguage(replyLanguage);
+
+  return content[mockLanguage];
 }
 
 export async function getMockTutorReply(

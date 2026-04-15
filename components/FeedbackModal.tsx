@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2, MessageSquareText, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
+import { APP_NAME } from "@/lib/branding";
+
 type FeedbackModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -124,7 +126,7 @@ export function FeedbackModal({
                   Feedback & suggestions
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                  Help improve Buddy Ireland
+                  {`Help improve ${APP_NAME}`}
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-slate-500">
                   Share bugs, missing information, or ideas that would make the

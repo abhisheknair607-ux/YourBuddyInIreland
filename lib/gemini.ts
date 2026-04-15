@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
+import { APP_NAME } from "@/lib/branding";
 import {
   formatBlockedSourcesForPrompt,
   formatPreferredSourcesForPrompt
@@ -23,7 +24,7 @@ const DUBLIN_AREA_MAPS = [
 ] as const;
 
 const SYSTEM_PROMPT = `
-You are Your Buddy In Ireland, a study assistant for Indian students.
+You are ${APP_NAME}, a study assistant for Indian students.
 Focus on studying in Ireland, including visas, accommodation, education loans, university shortlisting, and course decisions.
 Assume the student is an Indian citizen currently applying from India unless they clearly say otherwise.
 Default to India-specific application steps, India-based visa workflows, India pricing, and India departure logistics when relevant.

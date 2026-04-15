@@ -4,7 +4,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { GraduationCap, MapPin, Plane, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const INTRO_KEY = "ybii_intro_v2";
+import { BrandLogo } from "@/components/BrandLogo";
+import { APP_SLUG } from "@/lib/branding";
+
+const INTRO_KEY = `${APP_SLUG}_intro_v1`;
 
 export function IntroScreen() {
   const [visible, setVisible] = useState(() => {
@@ -96,18 +99,18 @@ export function IntroScreen() {
             </motion.div>
 
             <motion.div
-              className="relative flex h-20 w-20 items-center justify-center tablet:h-24 tablet:w-24"
-              initial={{ scale: 0.58, rotate: -10 }}
-              animate={{ scale: 1, rotate: 0 }}
+              className="relative flex items-center justify-center"
+              initial={{ scale: 0.7, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
               transition={{ duration: 0.72, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
             >
               <motion.div
-                className="absolute inset-0 rounded-[2rem] border border-sky-200/60 bg-white/45"
-                animate={{ scale: [1, 1.16, 1], opacity: [0.45, 0, 0.45] }}
+                className="absolute left-1/2 top-1/2 h-24 w-40 -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-sky-200/60 bg-white/45 blur-[1px] tablet:h-28 tablet:w-48"
+                animate={{ scale: [1, 1.08, 1], opacity: [0.45, 0, 0.45] }}
                 transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
               />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 shadow-[0_22px_60px_rgba(56,132,255,0.35)] tablet:h-20 tablet:w-20 tablet:rounded-[1.75rem]">
-                <Sparkles className="h-7 w-7 text-white tablet:h-9 tablet:w-9" />
+              <div className="relative rounded-[1.5rem] bg-white/70 px-4 py-3 shadow-[0_22px_60px_rgba(56,132,255,0.2)] backdrop-blur-sm tablet:px-5 tablet:py-4">
+                <BrandLogo size="lg" priority className="w-[220px] tablet:w-[280px]" />
               </div>
             </motion.div>
 
@@ -116,11 +119,8 @@ export function IntroScreen() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.34 }}
             >
-              <h1 className="font-heading text-[2rem] font-semibold tracking-tight text-slate-950 tablet:text-4xl laptop:text-5xl">
-                Your Buddy In Ireland
-              </h1>
               <motion.p
-                className="mt-3 text-sm font-medium leading-6 text-sky-700 tablet:text-lg"
+                className="mt-1 text-sm font-medium leading-6 text-sky-700 tablet:text-lg"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, delay: 0.48 }}

@@ -2,8 +2,10 @@ import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
 
+import { APP_SLUG } from "./branding";
+
 const DATA_DIR = path.join(process.cwd(), "data");
-const TMP_DATA_DIR = path.join(os.tmpdir(), "your-buddy-in-ireland");
+const TMP_DATA_DIR = path.join(os.tmpdir(), APP_SLUG);
 const AUTH_USERS_FILE = process.env.NETLIFY
   ? path.join(TMP_DATA_DIR, "auth-users.json")
   : path.join(DATA_DIR, "auth-users.json");

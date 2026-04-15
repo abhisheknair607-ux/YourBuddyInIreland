@@ -2,12 +2,17 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 import { Providers } from "@/components/Providers";
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/branding";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Your Buddy In Ireland",
-  description:
-    "A warm, animated frontend for Indian students planning to study in Ireland, with guidance around visas, accommodation, loans, universities, and course choices."
+  title: APP_NAME,
+  description: APP_DESCRIPTION,
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png"
+  }
 };
 
 export const viewport: Viewport = {

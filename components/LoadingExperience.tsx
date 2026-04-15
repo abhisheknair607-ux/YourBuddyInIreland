@@ -1,8 +1,7 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
-
 import { AnimatedGradientBackground } from "@/components/AnimatedGradientBackground";
+import { BrandLogo } from "@/components/BrandLogo";
 import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { PageTransition } from "@/components/PageTransition";
 
@@ -31,9 +30,8 @@ export function LoadingExperience({
       <PageTransition className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl items-center px-6 py-10">
         <div className="grid w-full items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           <section className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-semibold text-sky-700 backdrop-blur-xl">
-              <Sparkles className="h-4 w-4" />
-              Your Buddy In Ireland
+            <div className="inline-flex rounded-[1.4rem] border border-sky-200 bg-white/80 px-3 py-2 backdrop-blur-xl">
+              <BrandLogo size="sm" className="w-[150px]" />
             </div>
 
             <h1 className="mt-6 text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl">
