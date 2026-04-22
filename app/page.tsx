@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -82,7 +82,7 @@ export default function HomePage() {
               className="text-[2rem] font-semibold leading-tight text-slate-950 tablet:text-[2.6rem] laptop:text-[3.25rem] wide:text-[3.8rem]"
             >
               Your Ireland Study Companion for visas, accommodation, loans,
-              and university choices
+              and universities
             </motion.h1>
 
             <motion.p
@@ -132,9 +132,6 @@ export default function HomePage() {
                     A dashboard that guides the whole Ireland journey
                   </h2>
                 </div>
-                <div className="w-fit rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  Mock Demo
-                </div>
               </div>
 
               <div className="space-y-3 rounded-[1.5rem] border border-slate-200/70 bg-white/80 p-4 tablet:p-5">
@@ -171,15 +168,28 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <button
+                  <motion.div
+                    className="flex w-full flex-col gap-2 tablet:w-auto tablet:flex-row"
+                  >
+                    <motion.button
                       type="button"
                       onClick={() => openStarterChat(DEFAULT_STARTER_PROMPT)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       className="button-glow inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white tablet:w-auto"
                     >
                       Start Planning
                       <ArrowRight className="h-4 w-4" />
-                    </button>
+                    </motion.button>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Link
+                        href="/important-links"
+                        className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-white/75 px-5 py-3 text-sm font-semibold text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:border-sky-200 hover:bg-white hover:text-sky-700 tablet:w-auto"
+                      >
+                        Resources Hub
+                        <BookOpen className="h-4 w-4" />
+                      </Link>
+                    </motion.div>
                   </motion.div>
                 </div>
 
@@ -202,9 +212,6 @@ export default function HomePage() {
 
         {/* Footer */}
         <footer className="page-shell flex shrink-0 flex-col gap-2 py-4 text-xs text-slate-500 tablet:flex-row tablet:items-center tablet:justify-between">
-          <p className="max-w-[65ch]">
-            Frontend demo only. Real auth and Gemini integration can plug in later.
-          </p>
           <button
             type="button"
             onClick={() => setIsPrivacyOpen(true)}

@@ -11,17 +11,16 @@ import {
   FileCheck2,
   Globe2,
   GraduationCap,
-  Home,
   House,
   LogOut,
   Menu,
   MessageSquareText,
   Mic,
   MicOff,
-  MapPinned,
-  Phone,
   Plus,
+  RefreshCcw,
   Send,
+  Trash2,
   Volume2,
   VolumeX,
   X
@@ -34,6 +33,7 @@ import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "
 import { ChatMessage } from "@/components/ChatMessage";
 import { BrandLogo } from "@/components/BrandLogo";
 import { FeedbackModal } from "@/components/FeedbackModal";
+import { GetInTouchModal } from "@/components/GetInTouchModal";
 import { PageTransition } from "@/components/PageTransition";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { APP_NAME, APP_SHORT_NAME } from "@/lib/branding";
@@ -63,28 +63,28 @@ const sidebarShortcuts: Array<{
   icon: LucideIcon;
 }> = [
   {
-    title: "Visa checklist",
+    title: "Visa",
     description: "Documents, SOP, finances",
     prompt:
       "Create a simple Ireland student visa checklist for me, with the documents I should prepare first.",
     icon: FileCheck2
   },
   {
-    title: "Accommodation",
+    title: "House",
     description: "Rent, commute, safe areas",
     prompt:
       "Help me compare student accommodation options in Ireland and tell me what I should check first.",
     icon: House
   },
   {
-    title: "Universities",
+    title: "Uni",
     description: "Compare city and career fit",
     prompt:
       "Help me shortlist universities in Ireland based on cost, location, and career outcomes.",
     icon: GraduationCap
   },
   {
-    title: "Education loans",
+    title: "Loan",
     description: "Budget and funding plan",
     prompt:
       "Help me understand how to plan education loans and living costs for studying in Ireland.",
@@ -98,95 +98,18 @@ const landingPrompts = [
   "How should I shortlist affordable accommodation near campus?"
 ];
 
-const importantLinks: Array<{
-  title: string;
-  description: string;
-  href: string;
-  icon: LucideIcon;
-}> = [
-  {
-    title: "PPSN application",
-    description: "Start the official PPS number process through gov.ie.",
-    href: "https://www.gov.ie/en/service/12e6de-get-a-personal-public-service-pps-number/",
-    icon: FileCheck2
-  },
-  {
-    title: "IRP booking",
-    description: "Book or manage your Burgh Quay registration appointment.",
-    href: "https://www.irishimmigration.ie/burgh-quay-appointments/",
-    icon: FileCheck2
-  },
-  {
-    title: "Visa booking",
-    description: "Use the official VFS Ireland centre flow for appointments.",
-    href: "https://visa.vfsglobal.com/ind/en/irl/attend-centre",
-    icon: FileCheck2
-  },
-  {
-    title: "AVATS",
-    description: "Complete the Irish visa application form online.",
-    href: "https://www.visas.inis.gov.ie/avats/Default.aspx",
-    icon: FileCheck2
-  },
-  {
-    title: "Taxi booking in Ireland",
-    description: "Open FREENOW for taxi booking across major Irish cities.",
-    href: "https://www.free-now.com/ie/",
-    icon: MapPinned
-  },
-  {
-    title: "Vodafone Ireland",
-    description: "Compare Vodafone pay-as-you-go and SIM options.",
-    href: "https://www.vodafone.ie/mobile/pay-as-you-go",
-    icon: Phone
-  },
-  {
-    title: "Three Ireland",
-    description: "Browse Three Ireland mobile plans and prepaid options.",
-    href: "https://www.three.ie/",
-    icon: Phone
-  },
-  {
-    title: "eir mobile",
-    description: "Check eir SIM-only and mobile plan options.",
-    href: "https://www.eir.ie/mobile/",
-    icon: Phone
-  },
-  {
-    title: "Tesco Mobile Ireland",
-    description: "View Tesco Mobile Ireland plans and prepay offers.",
-    href: "https://www.tescomobile.ie/",
-    icon: Phone
-  },
-  {
-    title: "Lyca Mobile Ireland",
-    description: "Check Lyca Mobile Ireland SIM and bundle options.",
-    href: "https://www.lycamobile.ie/en/",
-    icon: Phone
-  },
-  {
-    title: "Student map",
-    description: "Open the shared Ireland student map for campuses and planning.",
-    href: "https://www.google.com/maps/d/viewer?mid=1ObFwqV2vtigkclpjea3sUHNhUuw&ll=53.291859560190396%2C-6.18664934077243&z=13",
-    icon: MapPinned
-  },
-  {
-    title: "Accommodation map",
-    description: "Compare student areas and day-to-day access around Dublin.",
-    href: "https://www.google.com/maps/d/viewer?mid=12P4oVY7A4w538meuFJUEEuMIJ1paCuE8&ll=53.28668449709923%2C-6.158606121728503&z=12",
-    icon: MapPinned
-  },
-  {
-    title: "Area demarcation map",
-    description: "Use this Dublin boundary view for clearer area comparisons.",
-    href: "https://www.google.com/maps/d/viewer?mid=1ObFwqV2vtigkclpjea3sUHNhUuw&ll=53.32837264518767%2C-6.201412219190399&z=13",
-    icon: MapPinned
-  }
-];
-
 type DashboardUser = {
   name: string;
   email: string;
+};
+
+type ChatConversationSummary = {
+  id: string;
+  title: string;
+  preview: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
 };
 
 const LOCAL_HOST_PATTERNS = [/^localhost$/i, /^127(?:\.\d{1,3}){3}$/, /^192\.168(?:\.\d{1,3}){2}$/, /^10(?:\.\d{1,3}){3}$/];
@@ -258,6 +181,8 @@ async function parseChatResponse(response: Response) {
         reply?: string;
         source?: TutorMessageSource;
         documents?: string[];
+        conversation?: ChatConversationSummary | null;
+        assistantMessage?: TutorMessage | null;
       };
     } catch {
       throw new Error("The chat API returned invalid JSON.");
@@ -274,6 +199,38 @@ async function parseChatResponse(response: Response) {
     rawBody.trim() || "The chat API returned an unexpected response."
   );
 }
+
+async function parseJsonResponse<T>(response: Response, fallbackError: string) {
+  const rawBody = await response.text();
+
+  try {
+    const data = (rawBody ? JSON.parse(rawBody) : {}) as T & {
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(data.error || fallbackError);
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error(fallbackError);
+  }
+}
+
+function getActiveChatStorageKey(email: string) {
+  return `guidon-active-chat:${email.trim().toLowerCase()}`;
+}
+
+const formatHistoryDate = (value: string) =>
+  new Intl.DateTimeFormat("en-IN", {
+    month: "short",
+    day: "numeric"
+  }).format(new Date(value));
 
 function getDeploymentHeaders() {
   const deploymentId = process.env.NEXT_PUBLIC_DEPLOYMENT_ID;
@@ -295,6 +252,7 @@ export default function DashboardPage() {
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [chatError, setChatError] = useState("");
+  const [lastFailedMessage, setLastFailedMessage] = useState("");
   const [voiceError, setVoiceError] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
@@ -302,10 +260,19 @@ export default function DashboardPage() {
   const [isVoiceOutputSupported, setIsVoiceOutputSupported] = useState(false);
   const [isVoiceRepliesEnabled, setIsVoiceRepliesEnabled] = useState(false);
   const [replyLanguage, setReplyLanguage] = useState<ReplyLanguage>("hinglish");
+  const [conversations, setConversations] = useState<ChatConversationSummary[]>(
+    []
+  );
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(
+    null
+  );
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isImportantLinksOpen, setIsImportantLinksOpen] = useState(false);
+  const [isLanguagePickerOpen, setIsLanguagePickerOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isGetInTouchModalOpen, setIsGetInTouchModalOpen] = useState(false);
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -314,6 +281,7 @@ export default function DashboardPage() {
   const shouldSubmitVoiceRef = useRef(false);
   const suppressVoiceErrorRef = useRef(false);
   const starterPromptHandledRef = useRef(false);
+  const historyHydratedRef = useRef("");
   const sendMessageRef = useRef<((messageText?: string) => Promise<void>) | null>(
     null
   );
@@ -525,6 +493,7 @@ export default function DashboardPage() {
   }, []);
 
   const hasConversation = messages.length > 0;
+  const selectedLanguageProfile = replyLanguageProfiles[replyLanguage];
 
   const sidebarGroups = useMemo(
     () => [
@@ -535,6 +504,115 @@ export default function DashboardPage() {
     ],
     []
   );
+
+  const rememberActiveConversation = (conversationId: string | null) => {
+    setActiveConversationId(conversationId);
+
+    if (typeof window === "undefined" || !user?.email) {
+      return;
+    }
+
+    const storageKey = getActiveChatStorageKey(user.email);
+
+    if (conversationId) {
+      window.localStorage.setItem(storageKey, conversationId);
+    } else {
+      window.localStorage.removeItem(storageKey);
+    }
+  };
+
+  const upsertConversation = (conversation: ChatConversationSummary) => {
+    setConversations((current) => {
+      const withoutCurrent = current.filter((item) => item.id !== conversation.id);
+
+      return [conversation, ...withoutCurrent].sort(
+        (first, second) =>
+          new Date(second.updatedAt).getTime() -
+          new Date(first.updatedAt).getTime()
+      );
+    });
+  };
+
+  const openConversation = async (
+    conversationId: string,
+    closeSidebar = true
+  ) => {
+    setIsHistoryLoading(true);
+    setHistoryError("");
+
+    try {
+      const response = await fetch(`/api/chat/conversations/${conversationId}`, {
+        headers: getDeploymentHeaders()
+      });
+      const data = await parseJsonResponse<{
+        conversation: ChatConversationSummary;
+        messages: TutorMessage[];
+      }>(response, "Unable to load this chat.");
+
+      setMessages(data.messages);
+      upsertConversation(data.conversation);
+      rememberActiveConversation(data.conversation.id);
+      setChatError("");
+      setLastFailedMessage("");
+      setVoiceError("");
+      lastSpokenMessageIdRef.current = "";
+
+      if (closeSidebar) {
+        setIsSidebarOpen(false);
+      }
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error ? error.message : "Unable to load this chat."
+      );
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
+
+  const loadConversations = async (openSavedChat = false) => {
+    if (!session?.user?.email) {
+      setConversations([]);
+      setHistoryError("");
+      return;
+    }
+
+    setIsHistoryLoading(true);
+    setHistoryError("");
+
+    try {
+      const response = await fetch("/api/chat/conversations", {
+        headers: getDeploymentHeaders()
+      });
+      const data = await parseJsonResponse<{
+        conversations: ChatConversationSummary[];
+      }>(response, "Unable to load chat history.");
+
+      setConversations(data.conversations);
+
+      if (openSavedChat && data.conversations.length && !messages.length) {
+        const savedConversationId =
+          typeof window !== "undefined"
+            ? window.localStorage.getItem(
+                getActiveChatStorageKey(session.user.email)
+              )
+            : null;
+        const conversationToOpen =
+          data.conversations.find(
+            (conversation) => conversation.id === savedConversationId
+          ) ?? data.conversations[0];
+
+        if (conversationToOpen) {
+          await openConversation(conversationToOpen.id, false);
+        }
+      }
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error ? error.message : "Unable to load chat history."
+      );
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
 
   const beginNewChat = () => {
     if (isListening && recognitionRef.current) {
@@ -550,8 +628,29 @@ export default function DashboardPage() {
     setVoiceError("");
     setLiveTranscript("");
     lastSpokenMessageIdRef.current = "";
+    rememberActiveConversation(null);
     setIsSidebarOpen(false);
   };
+
+  useEffect(() => {
+    if (isCheckingAuth || !user?.email) {
+      return;
+    }
+
+    if (!session?.user?.email) {
+      setConversations([]);
+      setHistoryError("");
+      historyHydratedRef.current = user.email;
+      return;
+    }
+
+    if (historyHydratedRef.current === session.user.email) {
+      return;
+    }
+
+    historyHydratedRef.current = session.user.email;
+    void loadConversations(true);
+  }, [isCheckingAuth, session?.user?.email, user?.email]);
 
   const goHome = () => {
     setIsSidebarOpen(false);
@@ -570,6 +669,45 @@ export default function DashboardPage() {
     router.push("/login");
   };
 
+  const deleteConversation = async (conversationId: string) => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Delete this chat history?")
+    ) {
+      return;
+    }
+
+    setIsHistoryLoading(true);
+    setHistoryError("");
+
+    try {
+      const response = await fetch(`/api/chat/conversations/${conversationId}`, {
+        method: "DELETE",
+        headers: getDeploymentHeaders()
+      });
+
+      await parseJsonResponse<{ ok: boolean }>(
+        response,
+        "Unable to delete this chat."
+      );
+
+      setConversations((current) =>
+        current.filter((conversation) => conversation.id !== conversationId)
+      );
+
+      if (activeConversationId === conversationId) {
+        setMessages([]);
+        rememberActiveConversation(null);
+      }
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error ? error.message : "Unable to delete this chat."
+      );
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
+
   const sendMessage = async (messageText?: string) => {
     const content = (messageText ?? draft).trim();
 
@@ -583,6 +721,7 @@ export default function DashboardPage() {
     setDraft("");
     setIsSending(true);
     setChatError("");
+    setLastFailedMessage("");
 
     try {
       const response = await fetch("/api/chat", {
@@ -593,7 +732,9 @@ export default function DashboardPage() {
         },
         body: JSON.stringify({
           message: content,
-          replyLanguage
+          replyLanguage,
+          conversationId: activeConversationId,
+          clientMessageId: userMessage.id
         })
       });
       const data = await parseChatResponse(response);
@@ -602,12 +743,19 @@ export default function DashboardPage() {
         throw new Error(data.error || "Unable to fetch a reply right now.");
       }
 
+      if (data.conversation) {
+        upsertConversation(data.conversation);
+        rememberActiveConversation(data.conversation.id);
+      }
+
+      setLastFailedMessage("");
       setMessages((current) => [
         ...current,
-        createTutorMessage("assistant", data.reply as string, {
-          source: data.source,
-          documents: data.documents
-        })
+        data.assistantMessage ??
+          createTutorMessage("assistant", data.reply as string, {
+            source: data.source,
+            documents: data.documents
+          })
       ]);
     } catch (error) {
       const message =
@@ -616,6 +764,7 @@ export default function DashboardPage() {
           : "Unable to fetch a reply right now.";
 
       setChatError(message);
+      setLastFailedMessage(content);
       setMessages((current) => [
         ...current,
         createTutorMessage(
@@ -626,6 +775,14 @@ export default function DashboardPage() {
     } finally {
       setIsSending(false);
     }
+  };
+
+  const retryLastFailedMessage = async () => {
+    if (!lastFailedMessage || isSending) {
+      return;
+    }
+
+    await sendMessage(lastFailedMessage);
   };
 
   useEffect(() => {
@@ -655,14 +812,13 @@ export default function DashboardPage() {
     await sendMessage(prompt);
   };
 
-  const cycleReplyLanguage = () => {
-    const currentIndex = replyLanguageOptions.findIndex(
-      (option) => option.value === replyLanguage
-    );
-    const nextOption =
-      replyLanguageOptions[(currentIndex + 1) % replyLanguageOptions.length];
+  const toggleLanguagePicker = () => {
+    setIsLanguagePickerOpen((currentValue) => !currentValue);
+  };
 
-    setReplyLanguage(nextOption.value);
+  const selectReplyLanguage = (nextLanguage: ReplyLanguage) => {
+    setReplyLanguage(nextLanguage);
+    setIsLanguagePickerOpen(false);
   };
 
   const handleVoiceToggle = () => {
@@ -725,21 +881,135 @@ export default function DashboardPage() {
 
   const renderSidebarContent = (compact: boolean) => {
     const showLabels = !compact;
+    const renderChatHistorySection = () => (
+      <section>
+        {showLabels ? (
+          <div className="mb-3 flex items-center justify-between gap-2 px-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
+              Chat history
+            </p>
+            {isHistoryLoading ? (
+              <span className="text-[10px] font-medium text-slate-400">
+                Syncing
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        {historyError && showLabels ? (
+          <p className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-700">
+            {historyError}
+          </p>
+        ) : null}
+
+        {conversations.length ? (
+          <div
+            className={`thin-scrollbar space-y-2 overflow-y-auto pr-1 ${
+              showLabels ? "max-h-[19.5rem]" : "max-h-[14.5rem]"
+            }`}
+          >
+            {conversations.map((conversation) => {
+              const isActive = conversation.id === activeConversationId;
+
+              return showLabels ? (
+                <div
+                  key={conversation.id}
+                  className={`group flex items-stretch overflow-hidden rounded-[1.15rem] border transition ${
+                    isActive
+                      ? "border-sky-300 bg-sky-50"
+                      : "border-slate-200/80 bg-white/70 hover:border-slate-300 hover:bg-white"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => void openConversation(conversation.id)}
+                    className="min-w-0 flex-1 px-3 py-2.5 text-left"
+                    title={conversation.title}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p
+                        className={`truncate text-[13px] font-semibold ${
+                          isActive ? "text-sky-800" : "text-slate-900"
+                        }`}
+                      >
+                        {conversation.title}
+                      </p>
+                      <span className="shrink-0 text-[10px] font-medium text-slate-400">
+                        {formatHistoryDate(conversation.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {conversation.preview || "No preview yet"}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteConversation(conversation.id)}
+                    className="flex w-9 shrink-0 items-center justify-center text-slate-400 opacity-100 transition hover:bg-white/70 hover:text-rose-500 tablet:opacity-0 tablet:group-hover:opacity-100"
+                    aria-label={`Delete ${conversation.title}`}
+                    title="Delete chat"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  key={conversation.id}
+                  type="button"
+                  onClick={() => void openConversation(conversation.id)}
+                  title={conversation.title}
+                  className={`flex h-10 w-full items-center justify-center rounded-[1.05rem] border transition ${
+                    isActive
+                      ? "border-sky-300 bg-sky-50 text-sky-700"
+                      : "border-slate-200/80 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white"
+                  }`}
+                >
+                  <MessageSquareText className="h-4 w-4" />
+                </button>
+              );
+            })}
+          </div>
+        ) : showLabels ? (
+          <p className="rounded-[1.15rem] border border-slate-200/80 bg-white/70 px-3 py-2.5 text-xs leading-5 text-slate-500">
+            Saved chats will appear here after your first message.
+          </p>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsSidebarOpen(false);
+            setIsFeedbackModalOpen(true);
+          }}
+          title="Feedback"
+          className={`mt-3 inline-flex items-center justify-center gap-2 rounded-[1.15rem] border border-slate-200 bg-white/75 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white ${
+            showLabels ? "h-10 w-full" : "h-10 w-full"
+          }`}
+        >
+          <MessageSquareText className="h-4 w-4" />
+          {showLabels ? <span>Feedback</span> : null}
+        </button>
+      </section>
+    );
 
     return (
       <div className="flex h-full flex-col text-slate-700">
         <div
-          className={`flex items-center border-b border-slate-200/80 px-3 py-3 ${
+          className={`flex items-center border-b border-slate-200/80 px-3 ${
             showLabels ? "justify-between" : "justify-center"
-          }`}
+          } ${showLabels ? "py-2" : "py-2.5"}`}
         >
-          <div
-            className={`inline-flex items-center rounded-full border border-white/80 bg-white/80 ${
-              showLabels ? "px-3 py-2" : "px-2 py-2"
+          <button
+            type="button"
+            onClick={goHome}
+            className={`inline-flex items-center justify-center rounded-[1rem] border border-white/80 bg-white/80 transition hover:border-slate-300 hover:bg-white ${
+              showLabels ? "px-2.5 py-1.5" : "px-1.5 py-1.5"
             }`}
+            title={`Go to home page for ${APP_NAME}`}
+            aria-label={`Go to home page for ${APP_NAME}`}
           >
-            <BrandLogo size="xs" className={showLabels ? "w-[104px]" : "w-12"} />
-          </div>
+            <BrandLogo size="xs" className={showLabels ? "w-[120px]" : "w-10"} />
+          </button>
 
           {showLabels ? (
             <button
@@ -760,48 +1030,27 @@ export default function DashboardPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
                   Connect with us
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Jump home or send feedback without leaving the dashboard.
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={goHome}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
-                  >
-                    <Home className="h-4 w-4" />
-                    Home
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSidebarOpen(false);
-                      setIsFeedbackModalOpen(true);
-                    }}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
-                  >
-                    <MessageSquareText className="h-4 w-4" />
-                    Feedback
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSidebarOpen(false);
+                    setIsGetInTouchModalOpen(true);
+                  }}
+                  className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                >
+                  <MessageSquareText className="h-4 w-4" />
+                  Get in touch
+                </button>
               </div>
             ) : (
               <div className="space-y-2">
                 <button
                   type="button"
-                  onClick={goHome}
-                  title="Home"
-                  className="flex h-10 w-full items-center justify-center rounded-xl border border-slate-200/80 bg-white/70 text-slate-600 transition hover:border-slate-300 hover:bg-white"
-                >
-                  <Home className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
                   onClick={() => {
                     setIsSidebarOpen(false);
-                    setIsFeedbackModalOpen(true);
+                    setIsGetInTouchModalOpen(true);
                   }}
-                  title="Feedback"
+                  title="Get in touch"
                   className="flex h-10 w-full items-center justify-center rounded-xl border border-slate-200/80 bg-white/70 text-slate-600 transition hover:border-slate-300 hover:bg-white"
                 >
                   <MessageSquareText className="h-4 w-4" />
@@ -830,7 +1079,7 @@ export default function DashboardPage() {
                     {group.title}
                   </p>
                 ) : null}
-                <div className="space-y-2">
+                <div className={showLabels ? "grid grid-cols-4 gap-2" : "space-y-2"}>
                   {group.items.map((item) => {
                     const Icon = item.icon;
 
@@ -842,7 +1091,7 @@ export default function DashboardPage() {
                         onClick={() => void handlePromptSend(item.prompt)}
                         className={`flex rounded-[1.15rem] border border-slate-200/80 bg-white/70 text-left transition hover:border-slate-300 hover:bg-white ${
                           showLabels
-                            ? "w-full items-start gap-2.5 px-3 py-2.5"
+                            ? "aspect-square w-full flex-col items-center justify-center gap-1.5 px-1.5 py-2 text-center"
                             : "h-10 w-full items-center justify-center"
                         }`}
                       >
@@ -850,12 +1099,9 @@ export default function DashboardPage() {
                           <Icon className="h-4 w-4" />
                         </div>
                         {showLabels ? (
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-medium text-slate-900">
+                          <div className="min-w-0 max-w-full">
+                            <p className="truncate text-[11px] font-semibold leading-4 text-slate-900">
                               {item.title}
-                            </p>
-                            <p className="mt-1 text-xs leading-5 text-slate-500">
-                              {item.description}
                             </p>
                           </div>
                         ) : null}
@@ -868,143 +1114,43 @@ export default function DashboardPage() {
 
             <section>
               {showLabels ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsImportantLinksOpen((current) => !current)}
-                    className="mb-3 flex w-full items-center justify-between rounded-[1.15rem] border border-slate-200/80 bg-white/70 px-3 py-2.5 text-left transition hover:border-slate-300 hover:bg-white"
-                  >
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
-                      Important links
-                    </span>
-                    <ChevronDown
-                      className={`h-4 w-4 text-slate-500 transition ${
-                        isImportantLinksOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {isImportantLinksOpen ? (
-                    <div className="space-y-2">
-                      {importantLinks.map((item) => (
-                        <a
-                          key={item.href}
-                          href={item.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={item.title}
-                          onClick={() => setIsSidebarOpen(false)}
-                          className="flex w-full items-start gap-2.5 rounded-[1.15rem] border border-slate-200/80 bg-white/70 px-3 py-2.5 text-left transition hover:border-slate-300 hover:bg-white"
-                        >
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.95rem] bg-sky-50 text-sky-700">
-                            <item.icon className="h-4 w-4" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="text-[13px] font-medium text-slate-900">
-                                {item.title}
-                              </p>
-                              <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-                            </div>
-                            <p className="mt-1 text-xs leading-5 text-slate-500">
-                              {item.description}
-                            </p>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  ) : null}
-                </>
+                <Link
+                  href="/important-links"
+                  target="_blank"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="group flex w-full items-center gap-3 overflow-hidden rounded-[1.2rem] border border-sky-100 bg-gradient-to-br from-white via-sky-50/80 to-blue-50/80 px-3 py-3 text-left shadow-[0_12px_28px_rgba(14,116,144,0.08)] transition hover:border-sky-200 hover:bg-white hover:shadow-[0_16px_34px_rgba(14,116,144,0.12)]"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 shadow-[0_8px_18px_rgba(14,116,144,0.12)]">
+                    <Globe2 className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1 leading-none">
+                    <p className="truncate text-[13px] font-semibold text-slate-950">
+                      Resources Hub
+                    </p>
+                    <p className="mt-1.5 truncate text-[11px] font-medium leading-4 text-slate-500">
+                      Official links & tools
+                    </p>
+                  </div>
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/85 text-slate-400 transition group-hover:text-sky-700">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </div>
+                </Link>
               ) : (
-                <div className="space-y-2">
-                  {importantLinks.map((item) => (
-                    <a
-                      key={item.href}
-                      href={item.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={item.title}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className="flex h-10 w-full items-center justify-center rounded-[1.05rem] border border-slate-200/80 bg-white/70 text-left transition hover:border-slate-300 hover:bg-white"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.95rem] bg-sky-50 text-sky-700">
-                        <item.icon className="h-4 w-4" />
-                      </div>
-                    </a>
-                  ))}
-                </div>
+                <Link
+                  href="/important-links"
+                  target="_blank"
+                  onClick={() => setIsSidebarOpen(false)}
+                  title="Resources Hub"
+                  className="flex h-10 w-full items-center justify-center rounded-[1.05rem] border border-sky-100 bg-gradient-to-br from-white via-sky-50/80 to-blue-50/80 text-left shadow-[0_10px_24px_rgba(14,116,144,0.08)] transition hover:border-sky-200 hover:bg-white"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 shadow-[0_8px_18px_rgba(14,116,144,0.12)]">
+                    <Globe2 className="h-4 w-4" />
+                  </div>
+                </Link>
               )}
             </section>
 
-            <section>
-              {showLabels ? (
-                <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
-                  Reply language
-                </p>
-              ) : null}
-              <div className={`${showLabels ? "grid grid-cols-2 gap-2" : "flex flex-col gap-2"}`}>
-                {replyLanguageOptions.map((option) => {
-                  const isSelected = option.value === replyLanguage;
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setReplyLanguage(option.value)}
-                      title={option.label}
-                      className={`rounded-full border text-xs font-semibold transition ${
-                        showLabels ? "px-3 py-2" : "h-9 w-full px-0"
-                      } ${
-                        isSelected
-                          ? "border-sky-300 bg-sky-50 text-sky-700"
-                          : "border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white"
-                      }`}
-                    >
-                      {showLabels ? option.label : option.compactLabel}
-                    </button>
-                  );
-                })}
-              </div>
-              {showLabels ? (
-                <p className="mt-3 text-xs leading-5 text-slate-500">
-                  {replyLanguageProfiles[replyLanguage].helperText}
-                </p>
-              ) : null}
-            </section>
-
-            <section>
-              {showLabels ? (
-                <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
-                  Voice replies
-                </p>
-              ) : null}
-              <button
-                type="button"
-                onClick={toggleVoiceReplies}
-                disabled={!isVoiceOutputSupported}
-                title={isVoiceRepliesEnabled ? "Spoken replies on" : "Spoken replies off"}
-                className={`flex rounded-[1.15rem] border transition disabled:cursor-not-allowed disabled:opacity-45 ${
-                  showLabels
-                    ? "w-full items-center justify-between px-3 py-2.5 text-left text-sm"
-                    : "h-10 w-full items-center justify-center"
-                } ${
-                  isVoiceRepliesEnabled
-                    ? "border-sky-300 bg-sky-50 text-sky-700"
-                    : "border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white"
-                }`}
-              >
-                {showLabels ? (
-                  <span>
-                    {isVoiceRepliesEnabled ? "Spoken replies on" : "Spoken replies off"}
-                  </span>
-                ) : null}
-                {isVoiceRepliesEnabled ? (
-                  <Volume2 className="h-4 w-4" />
-                ) : (
-                  <VolumeX className="h-4 w-4" />
-                )}
-              </button>
-            </section>
+            {renderChatHistorySection()}
           </div>
         </div>
 
@@ -1127,10 +1273,10 @@ export default function DashboardPage() {
 
                 <Link
                   href="/"
-                  className="inline-flex min-w-0 items-center rounded-[1.15rem] border border-white/80 bg-white/80 px-3 py-2 transition hover:border-slate-300 hover:bg-white"
+                  className="inline-flex h-10 min-w-0 max-w-[148px] items-center justify-center overflow-hidden rounded-[1rem] border border-white/80 bg-white/80 px-2 py-1 transition hover:border-slate-300 hover:bg-white tablet:max-w-[170px]"
                   title={`Go to home page for ${APP_NAME}`}
                 >
-                  <BrandLogo size="sm" className="w-[132px] tablet:w-[156px]" />
+                  <BrandLogo size="sm" className="max-h-8 w-[118px] tablet:w-[136px]" />
                 </Link>
               </div>
 
@@ -1225,9 +1371,20 @@ export default function DashboardPage() {
               <div className="shrink-0 px-2 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 tablet:px-5">
                 <div className="mx-auto w-full max-w-[44rem]">
                   {chatError ? (
-                    <p className="mb-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                      {chatError}
-                    </p>
+                    <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 tablet:flex-row tablet:items-center tablet:justify-between">
+                      <p className="leading-5">{chatError}</p>
+                      {lastFailedMessage ? (
+                        <button
+                          type="button"
+                          onClick={() => void retryLastFailedMessage()}
+                          disabled={isSending}
+                          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-full border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <RefreshCcw className="h-3.5 w-3.5" />
+                          Try again
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                   {voiceError ? (
                     <p className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -1251,18 +1408,67 @@ export default function DashboardPage() {
 
                     <div className="mt-1 flex items-center justify-between gap-1.5">
                       <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={cycleReplyLanguage}
-                          className="inline-flex h-8 min-w-[34px] items-center justify-center rounded-full border border-white/80 bg-white px-2 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-                          title={`Reply language: ${replyLanguageProfiles[replyLanguage].label}`}
-                          aria-label={`Reply language: ${replyLanguageProfiles[replyLanguage].label}`}
-                        >
-                          <Globe2 className="h-3.5 w-3.5" />
-                        </button>
-                        <span className="text-[11px] font-medium text-slate-500">
-                          {replyLanguageProfiles[replyLanguage].label}
-                        </span>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={toggleLanguagePicker}
+                            className="inline-flex h-8 max-w-[142px] items-center justify-center gap-1.5 rounded-full border border-white/80 bg-white px-2 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                            title={`Reply language: ${selectedLanguageProfile.label}`}
+                            aria-label={`Reply language: ${selectedLanguageProfile.label}`}
+                            aria-expanded={isLanguagePickerOpen}
+                          >
+                            <Globe2 className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate text-[11px] font-medium">
+                              {selectedLanguageProfile.label}
+                            </span>
+                            <ChevronDown
+                              className={`h-3.5 w-3.5 shrink-0 transition ${
+                                isLanguagePickerOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+
+                          <AnimatePresence initial={false}>
+                            {isLanguagePickerOpen ? (
+                              <motion.div
+                                initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                                transition={{ duration: 0.16 }}
+                                className="absolute bottom-10 left-0 z-30 w-44 overflow-hidden rounded-[1.15rem] border border-slate-200/80 bg-white/95 shadow-lg"
+                              >
+                                <div className="thin-scrollbar max-h-52 overflow-y-auto p-1.5">
+                                  {replyLanguageOptions.map((option) => {
+                                    const isSelected =
+                                      option.value === replyLanguage;
+
+                                    return (
+                                      <button
+                                        key={option.value}
+                                        type="button"
+                                        onClick={() =>
+                                          selectReplyLanguage(option.value)
+                                        }
+                                        className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs font-semibold transition ${
+                                          isSelected
+                                            ? "bg-sky-50 text-sky-700"
+                                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                        }`}
+                                      >
+                                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px]">
+                                          {option.compactLabel}
+                                        </span>
+                                        <span className="truncate">
+                                          {option.label}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </motion.div>
+                            ) : null}
+                          </AnimatePresence>
+                        </div>
 
                         <button
                           type="button"
@@ -1343,6 +1549,12 @@ export default function DashboardPage() {
       <FeedbackModal
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
+        userName={user?.name}
+        userEmail={user?.email}
+      />
+      <GetInTouchModal
+        isOpen={isGetInTouchModalOpen}
+        onClose={() => setIsGetInTouchModalOpen(false)}
         userName={user?.name}
         userEmail={user?.email}
       />

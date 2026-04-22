@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { Apple, Mail, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
+import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,15 +10,12 @@ import { getProviders, signIn, useSession } from "next-auth/react";
 import { AnimatedGradientBackground } from "@/components/AnimatedGradientBackground";
 import { BrandLogo } from "@/components/BrandLogo";
 import { GoogleIcon } from "@/components/GoogleIcon";
-import { OtpInput } from "@/components/OtpInput";
 import { PageTransition } from "@/components/PageTransition";
 import { PrivacyNotice } from "@/components/PrivacyNotice";
 import {
   getMockUser,
   hasAcceptedPrivacy,
-  mockSendOtp,
   mockLogout,
-  mockVerifyOtp,
   setPrivacyAccepted as persistPrivacyAccepted
 } from "@/lib/mockAuth";
 
@@ -32,50 +29,18 @@ type AuthProviderMap = Record<
   }
 >;
 
-const LOCAL_HOST_PATTERNS = [/^localhost$/i, /^127(?:\.\d{1,3}){3}$/, /^192\.168(?:\.\d{1,3}){2}$/, /^10(?:\.\d{1,3}){3}$/];
-
-function isLocalPreviewHost() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const { hostname } = window.location;
-
-  if (hostname === "::1") {
-    return true;
-  }
-
-  if (LOCAL_HOST_PATTERNS.some((pattern) => pattern.test(hostname))) {
-    return true;
-  }
-
-  const private172Match = hostname.match(/^172\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-
-  if (!private172Match) {
-    return false;
-  }
-
-  const secondOctet = Number(private172Match[1]);
-
-  return secondOctet >= 16 && secondOctet <= 31;
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [mode, setMode] = useState<AuthMode>("login");
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
-  const [emailFormOpen, setEmailFormOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [busyAction, setBusyAction] = useState<"" | "google" | "apple" | "email">("");
+  const [busyAction, setBusyAction] = useState<"" | "google">("");
   const [configuredProviders, setConfiguredProviders] = useState<AuthProviderMap>(
     {}
   );
   const [providersLoaded, setProvidersLoaded] = useState(false);
-  const [localGuestEnabled, setLocalGuestEnabled] = useState(false);
 
   useEffect(() => {
     if (status === "loading") {
@@ -125,10 +90,6 @@ export default function LoginPage() {
     };
   }, []);
 
-  useEffect(() => {
-    setLocalGuestEnabled(isLocalPreviewHost());
-  }, []);
-
   const ensurePrivacyAccepted = () => {
     if (privacyAccepted) {
       return true;
@@ -145,50 +106,21 @@ export default function LoginPage() {
     setErrorMessage("");
   };
 
-  const handleSocialLogin = async (provider: "google" | "apple") => {
+  const handleGoogleLogin = async () => {
     if (!ensurePrivacyAccepted()) {
       return;
     }
 
-    if (!configuredProviders[provider]) {
+    if (!configuredProviders.google) {
       setErrorMessage(
-        `${
-          provider === "google" ? "Google" : "Apple"
-        } sign-in is not configured yet. Add the provider credentials to enable it.`
+        "Google sign-in is not configured yet. Add the provider credentials to enable it."
       );
       return;
     }
 
-    setBusyAction(provider);
+    setBusyAction("google");
     setErrorMessage("");
-    await signIn(provider, { callbackUrl: "/dashboard" });
-  };
-
-  const handleEmailContinue = async () => {
-    if (!ensurePrivacyAccepted()) {
-      return;
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setErrorMessage("Enter a valid email address to receive the demo OTP.");
-      return;
-    }
-
-    setBusyAction("email");
-    setErrorMessage("");
-    await mockSendOtp(normalizedEmail);
-    setBusyAction("");
-    setOtpModalOpen(true);
-  };
-
-  const handleGuestContinue = () => {
-    if (!ensurePrivacyAccepted()) {
-      return;
-    }
-
-    router.push("/dashboard");
+    await signIn("google", { callbackUrl: "/dashboard" });
   };
 
   return (
@@ -216,7 +148,7 @@ export default function LoginPage() {
           <div className="order-2 max-w-2xl space-y-6 laptop:order-1 laptop:space-y-7">
             <div className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700 backdrop-blur-xl">
               <ShieldCheck className="h-4 w-4" />
-              Safe mock sign-in for your Ireland planning dashboard
+              Secure sign-in for your Ireland planning dashboard
             </div>
 
             <div>
@@ -224,10 +156,9 @@ export default function LoginPage() {
                 Sign in to organise your Ireland student journey.
               </h1>
               <p className="mt-4 max-w-[65ch] text-base leading-7 text-slate-600 tablet:mt-5 tablet:text-lg tablet:leading-8">
-                Sign in with Google for the real auth flow, or use the demo
-                email OTP while the rest of the product keeps taking shape for
-                Indian students planning visas, accommodation, loans,
-                university shortlists, and course choices in Ireland.
+                Sign in with Google to access your Ireland planning dashboard,
+                chat history, visa guidance, accommodation planning, education
+                loan support, and university shortlists.
               </p>
             </div>
 
@@ -246,8 +177,8 @@ export default function LoginPage() {
                   Uni + budget decisions
                 </p>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  The dashboard can later support real comparisons around
-                  universities, accommodation costs, and education loan plans.
+                  Compare universities, accommodation costs, and education loan
+                  plans with your saved guidance in one place.
                 </p>
               </div>
             </div>
@@ -282,16 +213,15 @@ export default function LoginPage() {
                     : "Start your Ireland student journey"}
                 </h2>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Use your Google account to create or access your account.
-                  Apple can be connected next, and email OTP remains available
-                  as a demo fallback on this screen.
+                  Use your Google account to create or access your account and
+                  keep your chat history connected to the same login.
                 </p>
               </div>
 
               <div className="space-y-4">
                 <button
                   type="button"
-                  onClick={() => void handleSocialLogin("google")}
+                  onClick={() => void handleGoogleLogin()}
                   disabled={
                     !providersLoaded ||
                     (busyAction !== "" && busyAction !== "google")
@@ -307,81 +237,6 @@ export default function LoginPage() {
                         ? "Google sign-in coming soon"
                         : "Checking Google sign-in..."}
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => void handleSocialLogin("apple")}
-                  disabled={
-                    !providersLoaded ||
-                    (busyAction !== "" && busyAction !== "apple")
-                  }
-                  className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-800 transition hover:scale-[1.01] hover:border-slate-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Apple className="h-5 w-5" />
-                  {busyAction === "apple"
-                    ? "Signing in..."
-                    : configuredProviders.apple
-                      ? "Continue with Apple"
-                      : providersLoaded
-                        ? "Apple sign-in coming soon"
-                        : "Checking Apple sign-in..."}
-                </button>
-
-                <div className="flex items-center gap-3 py-1">
-                  <div className="h-px flex-1 bg-slate-200" />
-                  <span className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-                    OR
-                  </span>
-                  <div className="h-px flex-1 bg-slate-200" />
-                </div>
-
-                {!emailFormOpen ? (
-                  <div className="space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailFormOpen(true);
-                        setErrorMessage("");
-                      }}
-                      className="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-semibold text-slate-800 transition hover:scale-[1.01] hover:border-slate-300 hover:bg-white"
-                    >
-                      <Mail className="h-5 w-5" />
-                      Continue with Email
-                    </button>
-
-                    {localGuestEnabled ? (
-                      <button
-                        type="button"
-                        onClick={handleGuestContinue}
-                        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm font-semibold text-sky-800 transition hover:scale-[1.01] hover:border-sky-300 hover:bg-white"
-                      >
-                        <ShieldCheck className="h-5 w-5" />
-                        Continue as guest
-                      </button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className="rounded-[1.75rem] border border-slate-200/80 bg-slate-50/80 p-4">
-                    <label className="text-sm font-semibold text-slate-700">
-                      Email address
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      placeholder="student@email.com"
-                      className="mt-3 h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:shadow-[0_0_0_4px_rgba(56,189,248,0.12)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void handleEmailContinue()}
-                      disabled={busyAction !== "" && busyAction !== "email"}
-                      className="mt-4 w-full rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {busyAction === "email" ? "Sending OTP..." : "Send Demo OTP"}
-                    </button>
-                  </div>
-                )}
               </div>
 
               <div className="mt-6 rounded-[1.5rem] border border-slate-200/80 bg-white/85 p-4">
@@ -393,9 +248,8 @@ export default function LoginPage() {
                     className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                   />
                   <span>
-                    I agree to the Privacy Policy and understand this sign-in
-                    flow is mocked for the frontend demo of an Ireland planning
-                    assistant.
+                    I agree to the Privacy Policy and understand how my account
+                    information may be used for the Ireland planning assistant.
                   </span>
                 </label>
               </div>
@@ -406,10 +260,8 @@ export default function LoginPage() {
                 </p>
               ) : (
                 <p className="mt-4 text-sm leading-7 text-slate-500 wrap-anywhere">
-                  Auth setup note: Google is ready when its credentials are
-                  configured. Apple can be added next. Email OTP still works as
-                  a demo, and the OTP is
-                  <span className="font-semibold text-slate-700"> 123456</span>.
+                  Your saved chats and requests stay attached to your Google
+                  login.
                 </p>
               )}
             </div>
@@ -422,28 +274,6 @@ export default function LoginPage() {
         onClose={() => setPrivacyModalOpen(false)}
         onAccepted={() => handlePrivacyChange(true)}
       />
-
-      <AnimatePresence>
-        {otpModalOpen ? (
-          <OtpInput
-            email={email.trim().toLowerCase()}
-            onClose={() => setOtpModalOpen(false)}
-            onResend={async () => {
-              await mockSendOtp(email.trim().toLowerCase());
-            }}
-            onSubmit={async (otp) => {
-              const result = await mockVerifyOtp(otp);
-
-              if (result.success) {
-                router.push("/dashboard");
-                return true;
-              }
-
-              return false;
-            }}
-          />
-        ) : null}
-      </AnimatePresence>
     </div>
   );
 }

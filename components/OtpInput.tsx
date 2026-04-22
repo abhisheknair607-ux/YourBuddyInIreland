@@ -114,7 +114,7 @@ export function OtpInput({
 
     if (!isValid) {
       setShakeCount((current) => current + 1);
-      setErrorMessage("Incorrect OTP. Try 123456 for this demo.");
+      setErrorMessage("Incorrect OTP. Try 123456 for local testing.");
       setDigits(Array(OTP_LENGTH).fill(""));
       inputRefs.current[0]?.focus();
     }
@@ -172,14 +172,14 @@ export function OtpInput({
               Enter the 6-digit code
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              We sent a demo OTP to <span className="font-medium">{email}</span>
+              We sent a sign-in code to <span className="font-medium">{email}</span>
             </p>
           </div>
         </div>
 
         <div className="mb-5 flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           <Clock3 className="h-4 w-4" />
-          Demo timer: <span className="font-semibold">{formattedTime}</span>
+          Code timer: <span className="font-semibold">{formattedTime}</span>
         </div>
 
         <div className="grid grid-cols-6 gap-2 tablet:gap-3">
@@ -211,7 +211,7 @@ export function OtpInput({
         ) : (
           <p className="mt-4 text-center text-sm text-slate-500">
             Use <span className="font-semibold text-slate-700">123456</span> for
-            the demo.
+            local testing.
           </p>
         )}
 

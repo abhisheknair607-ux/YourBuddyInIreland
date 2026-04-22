@@ -20,11 +20,22 @@ Add these in Netlify:
 - `AUTH_SECRET`
 - `AUTH_GOOGLE_ID`
 - `AUTH_GOOGLE_SECRET`
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+- `CONTACT_EMAIL_TO`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_TLS_REJECT_UNAUTHORIZED`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
 
 Optional:
 
-- `AUTH_APPLE_ID`
-- `AUTH_APPLE_SECRET`
+- `AUTH_URL` set to your deployed site URL, for example `https://guid-on.netlify.app`
+- `NEXT_PUBLIC_MENTORSHIP_BOOKING_URL`
 
 Use [`.env.local.example`](/c:/Users/itsab/OneDrive/Desktop/Projects/Chatbot%20for%20Students/.env.local.example) as the reference template.
 
@@ -39,20 +50,15 @@ Authorized redirect URIs should include:
 
 - `http://localhost:3018/api/auth/callback/google`
 - `http://127.0.0.1:3018/api/auth/callback/google`
-- `https://yourbuddyinireland.netlify.app/api/auth/callback/google`
+- `https://guid-on.netlify.app/api/auth/callback/google`
 
 If you later add a custom domain, add that callback too.
 
-## 4. Apple Sign In
+## 4. Email delivery
 
-Apple login requires:
+Feedback and get-in-touch requests are sent through SMTP to `CONTACT_EMAIL_TO`.
 
-- `AUTH_APPLE_ID`
-- `AUTH_APPLE_SECRET`
-- Apple web domain setup
-- matching Netlify production callback URL
-
-Until those are added, Apple will remain unavailable.
+For Gmail SMTP, use a Gmail App Password for `SMTP_PASS`. Use `SMTP_TLS_REJECT_UNAUTHORIZED=true` in Netlify unless your production SMTP path has a certificate issue.
 
 ## 5. Knowledge docs on Netlify
 
@@ -74,6 +80,8 @@ For durable production storage later, move user persistence to:
 - Postgres / Neon / Supabase
 - or another durable hosted database
 
+Chat history uses Firestore when the Firebase service account variables above are configured. In Netlify, paste the private key with newline escapes (`\n`) preserved.
+
 ## 7. Deployment skew protection
 
 This project now exposes `NEXT_PUBLIC_DEPLOYMENT_ID` at build time and sends the Netlify deployment header on client API requests. That helps reduce stale-client vs new-function mismatches during rolling deploys.
@@ -91,4 +99,3 @@ This project now exposes `NEXT_PUBLIC_DEPLOYMENT_ID` at build time and sends the
    - `/dashboard`
    - `/api/chat`
    - PDF/doc-based answers from `knowledge/`
-

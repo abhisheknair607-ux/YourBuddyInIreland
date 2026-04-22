@@ -22,5 +22,11 @@ localhostrun-*.err.log
 localtunnel-*.log
 localtunnel-*.err.log
 start-preview-*.cmd
+start-guidon-dev-*.cmd
 auth-start*.log
 localhost-*.log
+netlify-api-*.txt
+netlify-api-*.json
+netlify-node-api-*.txt
+netlify-node-api-*.json
+tsconfig.tsbuildinfo

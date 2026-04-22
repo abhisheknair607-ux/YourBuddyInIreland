@@ -31,7 +31,7 @@ export const INITIAL_TUTOR_MESSAGE: TutorMessage = {
   role: "assistant",
   createdAt: new Date().toISOString(),
   content:
-    "Namaste! I'm here to help Indian students planning to study in Ireland. Ask me about visas, accommodation, education loans, universities, or course choices."
+    "Namaste! I'm here to help Indian students planning to study in Ireland. Ask me about visas, accommodation, education loans, universities, or course decisions."
 };
 
 export const createTutorMessage = (

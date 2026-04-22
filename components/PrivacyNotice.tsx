@@ -101,8 +101,8 @@ export function PrivacyNotice({
                 className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
               />
               <span>
-                I accept the Privacy Policy and understand this is a frontend
-                demo with mock authentication.
+                I accept the Privacy Policy and understand how my study support
+                information may be handled.
               </span>
             </label>
 

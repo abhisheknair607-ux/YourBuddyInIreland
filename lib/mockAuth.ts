@@ -124,7 +124,7 @@ export async function mockSendOtp(email: string) {
   const storage = getStorage();
 
   storage?.setItem(PENDING_EMAIL_KEY, email);
-  console.log(`Mock OTP sent to ${email}. Demo OTP: ${DEMO_OTP}`);
+  console.log(`Local sign-in code sent to ${email}. Code: ${DEMO_OTP}`);
 
   return { success: true, email };
 }
@@ -135,7 +135,7 @@ export async function mockVerifyOtp(otp: string) {
   if (otp !== DEMO_OTP) {
     return {
       success: false,
-      error: "That OTP is not correct. Please try 123456 for the demo."
+      error: "That OTP is not correct. Please try 123456 for local testing."
     };
   }
 

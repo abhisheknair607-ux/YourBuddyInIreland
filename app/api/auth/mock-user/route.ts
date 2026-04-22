@@ -34,10 +34,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ savedUser });
   } catch (error) {
-    console.error("Mock auth save error:", error);
+    console.error("Local auth save error:", error);
 
     return NextResponse.json(
-      { error: "Unable to save the mock auth user." },
+      { error: "Unable to save the local auth user." },
       { status: 500 }
     );
   }

@@ -53,6 +53,11 @@ Keep answers compact unless the user asks for detail.
 
 let geminiClient: GoogleGenAI | null = null;
 
+export type GeminiConversationMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -73,6 +78,29 @@ function withFormattingRules(extraInstructions: string) {
 
 function getReplyLanguageInstruction(replyLanguage: ReplyLanguage) {
   return replyLanguageProfiles[replyLanguage].replyInstruction;
+}
+
+function formatConversationContext(history: GeminiConversationMessage[] = []) {
+  const recentHistory = history
+    .filter((message) => message.content.trim())
+    .slice(-20);
+
+  if (!recentHistory.length) {
+    return "";
+  }
+
+  return `
+Recent conversation context, oldest to newest:
+${recentHistory
+  .map((message) => {
+    const speaker = message.role === "user" ? "Student" : "Assistant";
+
+    return `${speaker}: ${message.content.trim()}`;
+  })
+  .join("\n\n")}
+
+Use this context only to understand follow-up questions. Do not repeat earlier answers unless useful.
+  `.trim();
 }
 
 function getGroundingSourceLinks(response: {
@@ -180,7 +208,8 @@ export async function getGeminiKnowledgeReply(
     fileName: string;
     text: string;
   }>,
-  replyLanguage: ReplyLanguage = "english"
+  replyLanguage: ReplyLanguage = "english",
+  history: GeminiConversationMessage[] = []
 ) {
   const client = getGeminiClient();
 
@@ -200,6 +229,7 @@ export async function getGeminiKnowledgeReply(
     contents: `${withFormattingRules(
       `
 ${getReplyLanguageInstruction(replyLanguage)}
+${formatConversationContext(history)}
 
 Answer the student using only the local document excerpts below.
 Do not use outside facts or your own memory.
@@ -235,7 +265,8 @@ ${knowledgeContext}
 
 export async function getGeminiWebReply(
   message: string,
-  replyLanguage: ReplyLanguage = "english"
+  replyLanguage: ReplyLanguage = "english",
+  history: GeminiConversationMessage[] = []
 ) {
   const client = getGeminiClient();
 
@@ -251,6 +282,7 @@ export async function getGeminiWebReply(
     contents: `${withFormattingRules(
       `
 ${getReplyLanguageInstruction(replyLanguage)}
+${formatConversationContext(history)}
 ${getDublinAreaInstruction(message)}
 
 Use Google Search only when needed for accurate and current information.
