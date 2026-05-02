@@ -5,7 +5,7 @@ export type ImportantReferenceLink = {
 
 export type ImportantReferenceItem = {
   title: string;
-  description: string;
+  description?: string;
   links: ImportantReferenceLink[];
 };
 
@@ -26,7 +26,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "PPSN",
-        description: "Apply for your Personal Public Service number and access MyWelfare.",
         links: [
           { label: "Gov.ie PPSN", url: "https://www.gov.ie/en/service/12e6f4-get-a-personal-public-service-pps-number" },
           { label: "MyWelfare", url: "https://www.mywelfare.ie" },
@@ -35,7 +34,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Visa And IRP",
-        description: "Visa forms, VFS appointments, IRP registration and renewal.",
         links: [
           { label: "AVATS", url: "https://www.visas.inis.gov.ie/avats/Default.aspx" },
           { label: "VFS Ireland", url: "https://visa.vfsglobal.com/ind/en/irl/attend-centre" },
@@ -45,7 +43,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Student Maps",
-        description: "Shared maps for campuses, accommodation areas and Dublin boundaries.",
         links: [
           { label: "Student Map", url: "https://www.google.com/maps/d/viewer?mid=1ObFwqV2vtigkclpjea3sUHNhUuw&ll=53.291859560190396%2C-6.18664934077243&z=13" },
           { label: "Accommodation Map", url: "https://www.google.com/maps/d/viewer?mid=12P4oVY7A4w538meuFJUEEuMIJ1paCuE8&ll=53.28668449709923%2C-6.158606121728503&z=12" },
@@ -54,7 +51,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Phones And Taxis",
-        description: "Mobile operators and taxi booking links for daily setup.",
         links: [
           { label: "Vodafone", url: "https://www.vodafone.ie/mobile/pay-as-you-go" },
           { label: "Three", url: "https://www.three.ie/" },
@@ -74,7 +70,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "Leaving Cert",
-        description: "State exam information, timetables, results and revision support.",
         links: [
           { label: "SEC", url: "https://www.sec.ie" },
           { label: "Examinations.ie", url: "https://www.examinations.ie" },
@@ -84,7 +79,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Postgraduate Courses",
-        description: "Postgraduate course search, CAO postgrad and programme references.",
         links: [
           { label: "Qualifax", url: "https://www.qualifax.ie" },
           { label: "CAO Postgrad", url: "https://www.cao.ie/index.php?page=postgrad" },
@@ -94,7 +88,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Universities",
-        description: "Undergraduate admissions, university listings and higher education references.",
         links: [
           { label: "CAO", url: "https://www.cao.ie" },
           { label: "Irish Universities Association", url: "https://www.iua.ie" },
@@ -104,7 +97,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Student Finance",
-        description: "Grants, scholarships, finance information and official student funding guidance.",
         links: [
           { label: "SUSI", url: "https://susi.ie" },
           { label: "HEA Student Finance", url: "https://hea.ie/funding-governance-performance/funding/student-finance" },
@@ -122,7 +114,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "IRP Renewal",
-        description: "Registration, renewal and Burgh Quay appointment references.",
         links: [
           { label: "Irish Immigration Service", url: "https://www.irishimmigration.ie" },
           { label: "Burgh Quay Appointments", url: "https://burghquayregistrationoffice.inis.gov.ie" },
@@ -131,7 +122,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Stamps And Rights",
-        description: "Stamp 1, 1G, 2, 2A, 3, 4 and residence permission conditions.",
         links: [
           { label: "Stamps Explained", url: "https://www.irishimmigration.ie/registering-your-immigration-permission/about-registration/immigration-stamp-for-permission-holders" },
           { label: "Citizens Information Stamps", url: "https://www.citizensinformation.ie/en/moving-country/moving-to-ireland/rights-of-residence-in-ireland/types-of-residence-permission" },
@@ -140,7 +130,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Work Permits",
-        description: "Critical Skills, General Employment and Intra-Company Transfer permits.",
         links: [
           { label: "Dept. Enterprise", url: "https://enterprise.gov.ie/en/what-we-do/workplace-and-skills/employment-permits" },
           { label: "Gov.ie Permits", url: "https://www.gov.ie/en/collection/61f0d4-employment-permits" },
@@ -150,7 +139,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Citizenship",
-        description: "Naturalisation, citizenship by descent and application references.",
         links: [
           { label: "Irish Immigration Citizenship", url: "https://www.irishimmigration.ie/citizenship" },
           { label: "Citizens Information Citizenship", url: "https://www.citizensinformation.ie/en/moving-country/irish-citizenship" },
@@ -167,7 +155,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "Tenant Rights",
-        description: "RTB, notice periods, deposit rules and dispute resolution.",
         links: [
           { label: "RTB", url: "https://www.rtb.ie" },
           { label: "Threshold", url: "https://www.threshold.ie" },
@@ -177,7 +164,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "HAP",
-        description: "Housing Assistance Payment eligibility, application and top-ups.",
         links: [
           { label: "HAP Ireland", url: "https://www.hap.ie" },
           { label: "Gov.ie HAP", url: "https://www.gov.ie/en/service/hap" },
@@ -186,7 +172,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Mortgage Tools",
-        description: "Mortgage calculators, rate comparisons and buyer guidance.",
         links: [
           { label: "CCPC Calculator", url: "https://www.ccpc.ie/consumers/money-tools/mortgage-calculator" },
           { label: "Bonkers Mortgages", url: "https://www.bonkers.ie/mortgages" },
@@ -196,7 +181,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "First Home",
-        description: "First Home Scheme, Help-to-Buy and affordable housing information.",
         links: [
           { label: "First Home Scheme", url: "https://www.firsthomescheme.ie" },
           { label: "Help To Buy", url: "https://www.revenue.ie/en/property/help-to-buy-incentive" },
@@ -214,7 +198,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "Tax",
-        description: "PAYE, USC, PRSI, tax credits and income tax references.",
         links: [
           { label: "Revenue Income Tax", url: "https://www.revenue.ie/en/jobs-and-pensions/calculating-your-income-tax/index.aspx" },
           { label: "ROS", url: "https://www.ros.ie" },
@@ -224,7 +207,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Medical Card",
-        description: "Medical card and GP visit card eligibility and application.",
         links: [
           { label: "HSE Medical Card", url: "https://www.hse.ie/eng/services/list/1/schemes/mc" },
           { label: "Gov.ie Medical Card", url: "https://www.gov.ie/en/service/medical-card" },
@@ -233,7 +215,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Means Test",
-        description: "Income, savings and assets assessed for social welfare supports.",
         links: [
           { label: "Gov.ie Means Test", url: "https://www.gov.ie/en/collection/means-test" },
           { label: "Citizens Information Means Test", url: "https://www.citizensinformation.ie/en/social-welfare/irish-social-welfare-system/means-test-for-social-welfare-payments/means-test" },
@@ -242,7 +223,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Banking",
-        description: "Compare bank accounts and digital banking options.",
         links: [
           { label: "CCPC Accounts", url: "https://www.ccpc.ie/consumers/money/bank-accounts" },
           { label: "An Post Money", url: "https://www.anpostmoney.ie" },
@@ -262,7 +242,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "GP Registration",
-        description: "Find and register with a local GP and primary care services.",
         links: [
           { label: "HSE Find A GP", url: "https://www.hse.ie/eng/services/list/2/gp/find-a-gp.html" },
           { label: "GP Nightline", url: "https://www.gpnightline.ie" },
@@ -272,7 +251,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Health Insurance",
-        description: "Compare Irish private health insurers and official plan information.",
         links: [
           { label: "HIA Comparison", url: "https://www.hia.ie" },
           { label: "VHI", url: "https://www.vhi.ie" },
@@ -282,7 +260,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "HSE Services",
-        description: "Public hospitals, specialist referrals and outpatient services.",
         links: [
           { label: "HSE", url: "https://www.hse.ie" },
           { label: "HSE Services Directory", url: "https://www2.hse.ie/services" },
@@ -291,7 +268,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Mental Health",
-        description: "Wellbeing supports, crisis lines and community services.",
         links: [
           { label: "HSE Mental Health", url: "https://www2.hse.ie/mental-health" },
           { label: "Samaritans Ireland", url: "https://www.samaritans.ie" },
@@ -310,7 +286,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "Job Search",
-        description: "Job boards and recruitment platforms for the Irish market.",
         links: [
           { label: "Jobs Ireland", url: "https://www.jobsireland.ie" },
           { label: "IrishJobs", url: "https://www.irishjobs.ie" },
@@ -321,7 +296,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Work Rights",
-        description: "Minimum wage, working hours, leave entitlements and WRC complaints.",
         links: [
           { label: "WRC", url: "https://www.workplacerelations.ie" },
           { label: "Citizens Information Employment", url: "https://www.citizensinformation.ie/en/employment" },
@@ -331,7 +305,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Payslip And PRSI",
-        description: "Payslips, USC bands, PRSI classes and tax credits.",
         links: [
           { label: "Revenue PAYE", url: "https://www.revenue.ie/en/jobs-and-pensions/index.aspx" },
           { label: "Gov.ie PRSI", url: "https://www.gov.ie/en/service/prsi" },
@@ -341,7 +314,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Skills And Qualifications",
-        description: "Upskilling, Springboard+, NARIC and professional recognition.",
         links: [
           { label: "Springboard+", url: "https://springboardcourses.ie" },
           { label: "Skillnet Ireland", url: "https://www.skillnetireland.ie" },
@@ -360,7 +332,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "Leap Card",
-        description: "Reusable travel card for Dublin and national public transport.",
         links: [
           { label: "Leap Card", url: "https://www.leapcard.ie" },
           { label: "TFI Leap Info", url: "https://www.transportforireland.ie/fares/leap-card" },
@@ -369,7 +340,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Dublin Transit",
-        description: "Dublin Bus, Luas, DART and Transport for Ireland.",
         links: [
           { label: "Dublin Bus", url: "https://www.dublinbus.ie" },
           { label: "Luas", url: "https://www.luas.ie" },
@@ -379,7 +349,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Intercity Travel",
-        description: "Rail and bus travel between major Irish cities.",
         links: [
           { label: "Irish Rail", url: "https://www.irishrail.ie" },
           { label: "Student Rail Discount", url: "https://www.irishrail.ie/en-ie/travel-information/student-travel" },
@@ -390,7 +359,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Cycling",
-        description: "Dublin Bikes, cycling routes and greenways.",
         links: [
           { label: "Dublin Bikes", url: "https://www.dublinbikes.ie" },
           { label: "TFI Cycling", url: "https://www.transportforireland.ie/getting-around/by-bike" },
@@ -408,7 +376,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "Energy",
-        description: "Electricity and gas setup, tariffs and switching providers.",
         links: [
           { label: "CRU", url: "https://www.cru.ie" },
           { label: "Bonkers Energy", url: "https://www.bonkers.ie/gas-electricity" },
@@ -418,7 +385,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Broadband",
-        description: "Home broadband plans, speeds and provider comparison.",
         links: [
           { label: "ComReg", url: "https://www.comreg.ie" },
           { label: "Bonkers Broadband", url: "https://www.bonkers.ie/broadband" },
@@ -428,7 +394,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Mobile",
-        description: "SIM cards, prepay, bill pay and operator comparison.",
         links: [
           { label: "ComReg Compare", url: "https://www.comreg.ie/compare" },
           { label: "Bonkers SIM Deals", url: "https://www.bonkers.ie/sim-only-deals" },
@@ -439,7 +404,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "SEAI Grants",
-        description: "Home energy upgrade grants, retrofit and solar PV schemes.",
         links: [
           { label: "SEAI Grants", url: "https://www.seai.ie/grants" },
           { label: "Better Energy Homes", url: "https://www.seai.ie/grants/home-energy-grants/better-energy-homes-scheme" },
@@ -456,7 +420,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "Theory Test",
-        description: "Book the theory test, official materials and practice questions.",
         links: [
           { label: "TheoryTest.ie", url: "https://www.theorytest.ie" },
           { label: "RSA Theory Test", url: "https://www.rsa.ie/services/learner-drivers/the-theory-test" },
@@ -466,7 +429,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Licence Steps",
-        description: "Learner permit, lessons, test and full licence pathway.",
         links: [
           { label: "RSA Learner Drivers", url: "https://www.rsa.ie/services/learner-drivers" },
           { label: "NDLS Apply Online", url: "https://www.ndls.ie" },
@@ -476,7 +438,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Rules And Foreign Licence",
-        description: "Rules of the road, offences and exchanging foreign licences.",
         links: [
           { label: "RSA Rules Of Road", url: "https://www.rsa.ie/road-safety/education/rules-of-the-road" },
           { label: "Gov.ie Rules Of Road", url: "https://www.gov.ie/en/publication/rules-of-the-road" },
@@ -494,7 +455,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
     items: [
       {
         title: "Indian Community",
-        description: "Associations, expat groups, migrant rights and integration support.",
         links: [
           { label: "Integration Ireland", url: "https://www.integration.ie" },
           { label: "Immigrant Council", url: "https://www.immigrantcouncil.ie" },
@@ -504,7 +464,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Public Advice",
-        description: "Free advice on rights, entitlements, services, money and debt.",
         links: [
           { label: "Citizens Information", url: "https://www.citizensinformation.ie" },
           { label: "Citizens Information Board", url: "https://www.citizensinformationboard.ie" },
@@ -514,7 +473,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Indian Embassy",
-        description: "Consular services, passport renewal, OCI and emergency assistance.",
         links: [
           { label: "Embassy Of India Dublin", url: "https://www.indianembassydublin.in" },
           { label: "Passport Seva India", url: "https://www.passportindia.gov.in" },
@@ -523,7 +481,6 @@ export const importantReferenceSections: ImportantReferenceSection[] = [
       },
       {
         title: "Anti-Racism And Legal Support",
-        description: "Report racism, access legal supports and migrant rights organisations.",
         links: [
           { label: "IHREC", url: "https://www.ihrec.ie" },
           { label: "Nasc", url: "https://www.nasc.ie" },

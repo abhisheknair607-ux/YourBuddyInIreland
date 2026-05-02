@@ -1,17 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import type { LucideIcon } from "lucide-react";
 import {
   Banknote,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
-  FileCheck2,
   Globe2,
-  GraduationCap,
-  House,
   LogOut,
   Menu,
   MessageSquareText,
@@ -23,19 +18,22 @@ import {
   Trash2,
   Volume2,
   VolumeX,
+  UsersRound,
   X
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { ChatMessage } from "@/components/ChatMessage";
 import { BrandLogo } from "@/components/BrandLogo";
 import { FeedbackModal } from "@/components/FeedbackModal";
+import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { GetInTouchModal } from "@/components/GetInTouchModal";
 import { PageTransition } from "@/components/PageTransition";
 import { TypingIndicator } from "@/components/TypingIndicator";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { APP_NAME, APP_SHORT_NAME } from "@/lib/branding";
 import {
   getSpeechRecognitionConstructor,
@@ -43,6 +41,8 @@ import {
   speakText,
   stopSpeaking
 } from "@/lib/browserSpeech";
+import { getClientRequestHeaders } from "@/lib/clientRequestHeaders";
+import { LOCAL_PREVIEW_USER, isLocalPreviewHost } from "@/lib/localPreview";
 import {
   TutorMessage,
   TutorMessageSource,
@@ -55,42 +55,28 @@ import {
   replyLanguageProfiles
 } from "@/lib/replyLanguage";
 import { DASHBOARD_STARTER_PROMPT_KEY } from "@/lib/starterPrompts";
+import { type StudentProfileCompletion } from "@/lib/studentProfile";
 
-const sidebarShortcuts: Array<{
-  title: string;
-  description: string;
-  prompt: string;
-  icon: LucideIcon;
-}> = [
+const sidebarPrimaryLinks = [
   {
-    title: "Visa",
-    description: "Documents, SOP, finances",
-    prompt:
-      "Create a simple Ireland student visa checklist for me, with the documents I should prepare first.",
-    icon: FileCheck2
+    title: "Resources Hub",
+    description: "Official links & tools",
+    href: "/important-links",
+    icon: Globe2
   },
   {
-    title: "House",
-    description: "Rent, commute, safe areas",
-    prompt:
-      "Help me compare student accommodation options in Ireland and tell me what I should check first.",
-    icon: House
-  },
-  {
-    title: "Uni",
-    description: "Compare city and career fit",
-    prompt:
-      "Help me shortlist universities in Ireland based on cost, location, and career outcomes.",
-    icon: GraduationCap
-  },
-  {
-    title: "Loan",
-    description: "Budget and funding plan",
-    prompt:
-      "Help me understand how to plan education loans and living costs for studying in Ireland.",
+    title: "Currency Check",
+    description: "EUR to INR rates & alerts",
+    href: "/currency-check",
     icon: Banknote
+  },
+  {
+    title: "Buddy & Expert Help",
+    description: "Support and guidance",
+    href: "/support",
+    icon: UsersRound
   }
-];
+] as const;
 
 const landingPrompts = [
   "Compare MSc Data Analytics options in Dublin and Limerick.",
@@ -112,8 +98,6 @@ type ChatConversationSummary = {
   messageCount: number;
 };
 
-const LOCAL_HOST_PATTERNS = [/^localhost$/i, /^127(?:\.\d{1,3}){3}$/, /^192\.168(?:\.\d{1,3}){2}$/, /^10(?:\.\d{1,3}){3}$/];
-
 const getInitials = (name: string) =>
   name
     .split(" ")
@@ -129,32 +113,6 @@ const getDisplayNameFromEmail = (email: string) =>
     .filter(Boolean)
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
-
-function isLocalPreviewHost() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const { hostname } = window.location;
-
-  if (hostname === "::1") {
-    return true;
-  }
-
-  if (LOCAL_HOST_PATTERNS.some((pattern) => pattern.test(hostname))) {
-    return true;
-  }
-
-  const private172Match = hostname.match(/^172\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-
-  if (!private172Match) {
-    return false;
-  }
-
-  const secondOctet = Number(private172Match[1]);
-
-  return secondOctet >= 16 && secondOctet <= 31;
-}
 
 function getSessionUser(sessionUser?: {
   name?: string | null;
@@ -226,21 +184,18 @@ function getActiveChatStorageKey(email: string) {
   return `guidon-active-chat:${email.trim().toLowerCase()}`;
 }
 
+function getDashboardVisitStorageKey(email: string) {
+  return `guidon-dashboard-visited:${email.trim().toLowerCase()}`;
+}
+
 const formatHistoryDate = (value: string) =>
   new Intl.DateTimeFormat("en-IN", {
     month: "short",
     day: "numeric"
   }).format(new Date(value));
 
-function getDeploymentHeaders() {
-  const deploymentId = process.env.NEXT_PUBLIC_DEPLOYMENT_ID;
-  const headers: Record<string, string> = {};
-
-  if (deploymentId) {
-    headers["x-deployment-id"] = deploymentId;
-  }
-
-  return headers;
+function getDeploymentHeaders(previewUser?: DashboardUser | null) {
+  return getClientRequestHeaders(previewUser ?? undefined);
 }
 
 export default function DashboardPage() {
@@ -273,6 +228,9 @@ export default function DashboardPage() {
   const [isLanguagePickerOpen, setIsLanguagePickerOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isGetInTouchModalOpen, setIsGetInTouchModalOpen] = useState(false);
+  const [isWelcomeBackVisible, setIsWelcomeBackVisible] = useState(false);
+  const [profileCompletion, setProfileCompletion] =
+    useState<StudentProfileCompletion | null>(null);
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -282,9 +240,9 @@ export default function DashboardPage() {
   const suppressVoiceErrorRef = useRef(false);
   const starterPromptHandledRef = useRef(false);
   const historyHydratedRef = useRef("");
-  const sendMessageRef = useRef<((messageText?: string) => Promise<void>) | null>(
-    null
-  );
+  const sendMessageRef = useRef<
+    ((messageText?: string, options?: { source?: string }) => Promise<void>) | null
+  >(null);
   const lastSpokenMessageIdRef = useRef("");
 
   useEffect(() => {
@@ -313,10 +271,7 @@ export default function DashboardPage() {
 
     if (!activeUser) {
       if (isLocalPreviewHost()) {
-        setUser({
-          name: "Guest Preview",
-          email: "guest@guidon.local"
-        });
+        setUser(LOCAL_PREVIEW_USER);
         setIsCheckingAuth(false);
         return;
       }
@@ -437,7 +392,7 @@ export default function DashboardPage() {
 
       if (shouldSubmit && transcript) {
         setDraft("");
-        void sendMessageRef.current?.(transcript);
+        void sendMessageRef.current?.(transcript, { source: "voice_input" });
       }
     };
 
@@ -460,6 +415,72 @@ export default function DashboardPage() {
   useEffect(() => {
     sendMessageRef.current = sendMessage;
   });
+
+  useEffect(() => {
+    if (isCheckingAuth || !user?.email || typeof window === "undefined") {
+      return;
+    }
+
+    if (user.email === "guest@guidon.local") {
+      return;
+    }
+
+    const storageKey = getDashboardVisitStorageKey(user.email);
+    const hasVisitedBefore = window.localStorage.getItem(storageKey) === "true";
+
+    window.localStorage.setItem(storageKey, "true");
+
+    if (hasVisitedBefore) {
+      setIsWelcomeBackVisible(true);
+    }
+  }, [isCheckingAuth, user?.email]);
+
+  useEffect(() => {
+    if (isCheckingAuth || !user?.email) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadProfileCompletion() {
+      try {
+        const response = await fetch("/api/profile", {
+          headers: getClientRequestHeaders(user ?? undefined)
+        });
+        const data = await parseJsonResponse<{
+          completion: StudentProfileCompletion;
+        }>(response, "Unable to load your profile.");
+
+        if (!isMounted) {
+          return;
+        }
+
+        setProfileCompletion(data.completion);
+      } catch {
+        if (isMounted) {
+          setProfileCompletion(null);
+        }
+      }
+    }
+
+    void loadProfileCompletion();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isCheckingAuth, user?.email, user?.name]);
+
+  useEffect(() => {
+    if (!isWelcomeBackVisible || typeof window === "undefined") {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setIsWelcomeBackVisible(false);
+    }, 1400);
+
+    return () => window.clearTimeout(timeout);
+  }, [isWelcomeBackVisible]);
 
   useEffect(() => {
     if (!isVoiceOutputSupported || !isVoiceRepliesEnabled) {
@@ -494,16 +515,12 @@ export default function DashboardPage() {
 
   const hasConversation = messages.length > 0;
   const selectedLanguageProfile = replyLanguageProfiles[replyLanguage];
-
-  const sidebarGroups = useMemo(
-    () => [
-      {
-        title: "Quick actions",
-        items: sidebarShortcuts
-      }
-    ],
-    []
-  );
+  const firstName = user?.name?.split(" ")[0] || "Student";
+  const profileCompletionPercent = profileCompletion?.percentage ?? 0;
+  const profileCompletionText =
+    profileCompletionPercent >= 100
+      ? "Profile complete"
+      : `Complete profile · ${profileCompletionPercent}%`;
 
   const rememberActiveConversation = (conversationId: string | null) => {
     setActiveConversationId(conversationId);
@@ -708,7 +725,10 @@ export default function DashboardPage() {
     }
   };
 
-  const sendMessage = async (messageText?: string) => {
+  const sendMessage = async (
+    messageText?: string,
+    options?: { source?: string }
+  ) => {
     const content = (messageText ?? draft).trim();
 
     if (!content || isSending) {
@@ -728,7 +748,7 @@ export default function DashboardPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...getDeploymentHeaders()
+          ...getDeploymentHeaders(user)
         },
         body: JSON.stringify({
           message: content,
@@ -757,6 +777,12 @@ export default function DashboardPage() {
             documents: data.documents
           })
       ]);
+      trackAnalyticsEvent("chat_message_sent", {
+        source: options?.source ?? (messageText ? "programmatic" : "manual"),
+        reply_language: replyLanguage,
+        has_active_conversation: Boolean(activeConversationId),
+        message_length: content.length
+      });
     } catch (error) {
       const message =
         error instanceof Error
@@ -782,7 +808,7 @@ export default function DashboardPage() {
       return;
     }
 
-    await sendMessage(lastFailedMessage);
+    await sendMessage(lastFailedMessage, { source: "retry" });
   };
 
   useEffect(() => {
@@ -804,12 +830,12 @@ export default function DashboardPage() {
 
     starterPromptHandledRef.current = true;
     window.sessionStorage.removeItem(DASHBOARD_STARTER_PROMPT_KEY);
-    void sendMessage(starterPrompt);
+    void sendMessage(starterPrompt, { source: "starter_prompt_auto" });
   }, [isCheckingAuth, isSending, sendMessage, user]);
 
   const handlePromptSend = async (prompt: string) => {
     setIsSidebarOpen(false);
-    await sendMessage(prompt);
+    await sendMessage(prompt, { source: "landing_prompt" });
   };
 
   const toggleLanguagePicker = () => {
@@ -1028,12 +1054,15 @@ export default function DashboardPage() {
             {showLabels ? (
               <div className="rounded-[1.3rem] border border-slate-200/80 bg-white/75 p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
-                  Connect with us
+                  Connect with experts
                 </p>
                 <button
                   type="button"
                   onClick={() => {
                     setIsSidebarOpen(false);
+                    trackAnalyticsEvent("support_cta_open", {
+                      source: "dashboard_sidebar"
+                    });
                     setIsGetInTouchModalOpen(true);
                   }}
                   className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
@@ -1048,6 +1077,9 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => {
                     setIsSidebarOpen(false);
+                    trackAnalyticsEvent("support_cta_open", {
+                      source: "dashboard_sidebar"
+                    });
                     setIsGetInTouchModalOpen(true);
                   }}
                   title="Get in touch"
@@ -1072,82 +1104,56 @@ export default function DashboardPage() {
           </button>
 
           <div className="mt-4 space-y-5">
-            {sidebarGroups.map((group) => (
-              <section key={group.title}>
-                {showLabels ? (
-                  <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
-                    {group.title}
-                  </p>
-                ) : null}
-                <div className={showLabels ? "grid grid-cols-4 gap-2" : "space-y-2"}>
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-
-                    return (
-                      <button
-                        key={item.title}
-                        type="button"
-                        title={item.title}
-                        onClick={() => void handlePromptSend(item.prompt)}
-                        className={`flex rounded-[1.15rem] border border-slate-200/80 bg-white/70 text-left transition hover:border-slate-300 hover:bg-white ${
-                          showLabels
-                            ? "aspect-square w-full flex-col items-center justify-center gap-1.5 px-1.5 py-2 text-center"
-                            : "h-10 w-full items-center justify-center"
-                        }`}
-                      >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.95rem] bg-sky-50 text-sky-700">
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        {showLabels ? (
-                          <div className="min-w-0 max-w-full">
-                            <p className="truncate text-[11px] font-semibold leading-4 text-slate-900">
-                              {item.title}
-                            </p>
-                          </div>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-
             <section>
               {showLabels ? (
-                <Link
-                  href="/important-links"
-                  target="_blank"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="group flex w-full items-center gap-3 overflow-hidden rounded-[1.2rem] border border-sky-100 bg-gradient-to-br from-white via-sky-50/80 to-blue-50/80 px-3 py-3 text-left shadow-[0_12px_28px_rgba(14,116,144,0.08)] transition hover:border-sky-200 hover:bg-white hover:shadow-[0_16px_34px_rgba(14,116,144,0.12)]"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 shadow-[0_8px_18px_rgba(14,116,144,0.12)]">
-                    <Globe2 className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1 leading-none">
-                    <p className="truncate text-[13px] font-semibold text-slate-950">
-                      Resources Hub
-                    </p>
-                    <p className="mt-1.5 truncate text-[11px] font-medium leading-4 text-slate-500">
-                      Official links & tools
-                    </p>
-                  </div>
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/85 text-slate-400 transition group-hover:text-sky-700">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </div>
-                </Link>
-              ) : (
-                <Link
-                  href="/important-links"
-                  target="_blank"
-                  onClick={() => setIsSidebarOpen(false)}
-                  title="Resources Hub"
-                  className="flex h-10 w-full items-center justify-center rounded-[1.05rem] border border-sky-100 bg-gradient-to-br from-white via-sky-50/80 to-blue-50/80 text-left shadow-[0_10px_24px_rgba(14,116,144,0.08)] transition hover:border-sky-200 hover:bg-white"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 shadow-[0_8px_18px_rgba(14,116,144,0.12)]">
-                    <Globe2 className="h-4 w-4" />
-                  </div>
-                </Link>
-              )}
+                <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700">
+                  Tools & Support
+                </p>
+              ) : null}
+              <div className="space-y-2">
+                {sidebarPrimaryLinks.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.title}
+                      href={item.href}
+                      onClick={() => {
+                        setIsSidebarOpen(false);
+                        trackAnalyticsEvent("dashboard_tool_open", {
+                          tool: item.title,
+                          href: item.href
+                        });
+                      }}
+                      title={item.title}
+                      className={`group flex overflow-hidden rounded-[1.2rem] border border-sky-100 bg-gradient-to-br from-white via-sky-50/80 to-blue-50/80 text-left shadow-[0_12px_28px_rgba(14,116,144,0.08)] transition hover:border-sky-200 hover:bg-white hover:shadow-[0_16px_34px_rgba(14,116,144,0.12)] ${
+                        showLabels
+                          ? "w-full items-center gap-3 px-3 py-3"
+                          : "h-10 w-full items-center justify-center"
+                      }`}
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-sky-700 shadow-[0_8px_18px_rgba(14,116,144,0.12)]">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      {showLabels ? (
+                        <>
+                          <div className="min-w-0 flex-1 leading-none">
+                            <p className="truncate text-[13px] font-semibold text-slate-950">
+                              {item.title}
+                            </p>
+                            <p className="mt-1.5 truncate text-[11px] font-medium leading-4 text-slate-500">
+                              {item.description}
+                            </p>
+                          </div>
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/85 text-slate-400 transition group-hover:text-sky-700">
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </div>
+                        </>
+                      ) : null}
+                    </Link>
+                  );
+                })}
+              </div>
             </section>
 
             {renderChatHistorySection()}
@@ -1155,25 +1161,39 @@ export default function DashboardPage() {
         </div>
 
         <div className={`border-t border-slate-200/80 ${showLabels ? "px-3 py-3" : "px-2.5 py-3"}`}>
-          <div
-            className={`rounded-[1.15rem] border border-white/80 bg-white/80 ${
-              showLabels
-                ? "flex items-center gap-3 px-3 py-2.5"
-                : "flex justify-center px-0 py-2.5"
+          <Link
+            href="/profile"
+            onClick={() => setIsSidebarOpen(false)}
+            title="Open profile"
+            className={`group rounded-[1.15rem] border border-white/80 bg-white/80 transition hover:border-slate-300 hover:bg-white ${
+              showLabels ? "block px-3 py-2.5" : "flex justify-center px-0 py-2.5"
             }`}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-sm font-semibold text-white">
-              {getInitials(user?.name ?? "Student")}
-            </div>
-            {showLabels ? (
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-slate-900">
-                  {user?.name ?? "Student"}
-                </p>
-                <p className="truncate text-xs text-slate-500">{user?.email}</p>
+            <div className={`flex ${showLabels ? "items-center gap-3" : "justify-center"}`}>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 text-sm font-semibold text-white">
+                {getInitials(user?.name ?? "Student")}
               </div>
-            ) : null}
-          </div>
+              {showLabels ? (
+                <>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-900">
+                      {user?.name ?? "Student"}
+                    </p>
+                    <p className="truncate text-xs text-slate-500">
+                      {profileCompletionText}
+                    </p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600"
+                        style={{ width: `${profileCompletionPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:text-sky-700" />
+                </>
+              ) : null}
+            </div>
+          </Link>
 
           <button
             type="button"
@@ -1208,8 +1228,35 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] overflow-hidden bg-gradient-to-br from-white via-sky-50 to-blue-50 text-slate-950">
+    <div className="relative min-h-[100dvh] overflow-hidden bg-gradient-to-br from-white via-sky-50 to-blue-50 text-slate-950">
+      <FloatingStudyIcons />
       <PageTransition className="relative flex h-[100dvh] max-h-[100dvh] gap-2 px-1 py-1.5 pt-safe tablet:page-shell tablet:gap-3 tablet:py-3">
+        <AnimatePresence initial={false}>
+          {isWelcomeBackVisible ? (
+            <motion.div
+              initial={{ opacity: 0, y: -18, x: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -14, x: 18, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="pointer-events-none fixed right-3 top-[calc(env(safe-area-inset-top)+12px)] z-50 w-[min(92vw,320px)]"
+            >
+              <div className="flex items-start gap-3 rounded-[1.35rem] border border-sky-100/90 bg-white/95 px-4 py-3 shadow-[0_18px_45px_rgba(14,116,144,0.18)] backdrop-blur-xl">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-600">
+                  <MessageSquareText className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-950">
+                    Welcome back, {firstName}
+                  </p>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                    Your assistant is ready to pick up where you left off.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
         <AnimatePresence>
           {isSidebarOpen ? (
             <>
@@ -1412,7 +1459,7 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             onClick={toggleLanguagePicker}
-                            className="inline-flex h-8 max-w-[142px] items-center justify-center gap-1.5 rounded-full border border-white/80 bg-white px-2 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                            className="inline-flex h-8 max-w-[148px] min-[380px]:max-w-[180px] items-center justify-center gap-1.5 rounded-full border border-white/80 bg-white px-2 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                             title={`Reply language: ${selectedLanguageProfile.label}`}
                             aria-label={`Reply language: ${selectedLanguageProfile.label}`}
                             aria-expanded={isLanguagePickerOpen}
@@ -1435,7 +1482,7 @@ export default function DashboardPage() {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 6, scale: 0.98 }}
                                 transition={{ duration: 0.16 }}
-                                className="absolute bottom-10 left-0 z-30 w-44 overflow-hidden rounded-[1.15rem] border border-slate-200/80 bg-white/95 shadow-lg"
+                                className="absolute bottom-10 left-0 z-30 w-52 overflow-hidden rounded-[1.15rem] border border-slate-200/80 bg-white/95 shadow-lg"
                               >
                                 <div className="thin-scrollbar max-h-52 overflow-y-auto p-1.5">
                                   {replyLanguageOptions.map((option) => {
@@ -1499,7 +1546,7 @@ export default function DashboardPage() {
                           type="button"
                           onClick={toggleVoiceReplies}
                           disabled={!isVoiceOutputSupported}
-                          className={`hidden h-8 min-w-[34px] items-center justify-center rounded-full border px-2 transition min-[380px]:inline-flex ${
+                          className={`inline-flex h-8 min-w-[34px] items-center justify-center rounded-full border px-2 transition ${
                             isVoiceRepliesEnabled
                               ? "border-sky-300 bg-sky-50 text-sky-700"
                               : "border-white/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"

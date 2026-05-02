@@ -2,13 +2,17 @@
 
 import { motion } from "framer-motion";
 import {
+  Banknote,
+  BookOpen,
   Briefcase,
   FileText,
   GraduationCap,
   Home,
   MapPin,
   Plane,
-  Sparkles
+  ShieldCheck,
+  Sparkles,
+  UsersRound
 } from "lucide-react";
 
 const floatingIcons = [
@@ -65,6 +69,51 @@ const floatingIcons = [
       rotate: [0, 12, 0]
     },
     duration: 9.5
+  },
+  {
+    Icon: BookOpen,
+    className: "left-[6%] top-[40%] text-blue-500/28",
+    animation: {
+      y: [0, -14, 0],
+      rotate: [0, 8, 0]
+    },
+    duration: 10.5
+  },
+  {
+    Icon: Banknote,
+    className: "left-[10%] bottom-[30%] text-emerald-500/28",
+    animation: {
+      y: [0, 14, 0],
+      rotate: [0, -6, 0]
+    },
+    duration: 11.5
+  },
+  {
+    Icon: UsersRound,
+    className: "right-[9%] top-[38%] text-sky-500/28",
+    animation: {
+      y: [0, -15, 0],
+      rotate: [0, 7, 0]
+    },
+    duration: 9.75
+  },
+  {
+    Icon: ShieldCheck,
+    className: "right-[16%] bottom-[28%] text-indigo-500/24",
+    animation: {
+      y: [0, 16, 0],
+      rotate: [0, -7, 0]
+    },
+    duration: 12.5
+  },
+  {
+    Icon: Sparkles,
+    className: "left-[24%] top-[30%] text-cyan-500/24",
+    animation: {
+      y: [0, -12, 0],
+      rotate: [0, 10, 0]
+    },
+    duration: 8.75
   }
 ];
 

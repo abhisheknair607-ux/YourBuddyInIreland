@@ -6,6 +6,8 @@ import type { ReplyLanguage } from "@/lib/replyLanguage";
 type FirestoreValue = {
   stringValue?: string;
   integerValue?: string;
+  doubleValue?: number;
+  nullValue?: null;
   booleanValue?: boolean;
   timestampValue?: string;
   arrayValue?: {
@@ -48,10 +50,16 @@ export type ChatConversationSummary = {
   createdAt: string;
   updatedAt: string;
   messageCount: number;
+  conversationSummary?: string;
+  lastTopic?: string;
+  lastIntent?: string;
+  riskFlags?: string[];
+  confidenceScore?: number | null;
 };
 
 export type StoredChatMessage = TutorMessage & {
   language?: ReplyLanguage;
+  detectedIntent?: string;
 };
 
 const FIRESTORE_SCOPE = "https://www.googleapis.com/auth/datastore";
@@ -256,6 +264,14 @@ function integerField(value: number) {
   return { integerValue: String(value) };
 }
 
+function doubleField(value: number) {
+  return { doubleValue: value };
+}
+
+function nullField() {
+  return { nullValue: null };
+}
+
 function booleanField(value: boolean) {
   return { booleanValue: value };
 }
@@ -289,6 +305,24 @@ function getBoolean(fields: Record<string, FirestoreValue> | undefined, key: str
 
 function getInteger(fields: Record<string, FirestoreValue> | undefined, key: string) {
   return Number(fields?.[key]?.integerValue ?? 0);
+}
+
+function getNumber(fields: Record<string, FirestoreValue> | undefined, key: string) {
+  const field = fields?.[key];
+
+  if (field?.nullValue === null) {
+    return null;
+  }
+
+  if (typeof field?.doubleValue === "number") {
+    return field.doubleValue;
+  }
+
+  if (typeof field?.integerValue === "string") {
+    return Number(field.integerValue);
+  }
+
+  return null;
 }
 
 function getTimestamp(
@@ -326,7 +360,12 @@ function conversationFromDocument(
     ownerName: getOptionalString(fields, "ownerName"),
     createdAt: getTimestamp(fields, "createdAt"),
     updatedAt: getTimestamp(fields, "updatedAt"),
-    messageCount: getInteger(fields, "messageCount")
+    messageCount: getInteger(fields, "messageCount"),
+    conversationSummary: getString(fields, "conversationSummary"),
+    lastTopic: getString(fields, "lastTopic"),
+    lastIntent: getString(fields, "lastIntent"),
+    riskFlags: getStringArray(fields, "riskFlags"),
+    confidenceScore: getNumber(fields, "confidenceScore")
   };
 }
 
@@ -346,7 +385,8 @@ function messageFromDocument(document: FirestoreDocument): StoredChatMessage | n
     createdAt: getTimestamp(fields, "createdAt"),
     source: getOptionalString(fields, "source") as TutorMessageSource | undefined,
     documents: getStringArray(fields, "documents"),
-    language: getOptionalString(fields, "language") as ReplyLanguage | undefined
+    language: getOptionalString(fields, "language") as ReplyLanguage | undefined,
+    detectedIntent: getOptionalString(fields, "detectedIntent") ?? undefined
   };
 }
 
@@ -370,6 +410,11 @@ function buildConversationFields(
     updatedAt: string;
     messageCount?: number;
     deleted?: boolean;
+    conversationSummary?: string;
+    lastTopic?: string;
+    lastIntent?: string;
+    riskFlags?: string[];
+    confidenceScore?: number | null;
   }
 ) {
   return {
@@ -381,7 +426,15 @@ function buildConversationFields(
     createdAt: timestampField(values.createdAt),
     updatedAt: timestampField(values.updatedAt),
     messageCount: integerField(values.messageCount ?? 0),
-    deleted: booleanField(values.deleted ?? false)
+    deleted: booleanField(values.deleted ?? false),
+    conversationSummary: stringField(values.conversationSummary ?? ""),
+    lastTopic: stringField(values.lastTopic ?? ""),
+    lastIntent: stringField(values.lastIntent ?? ""),
+    riskFlags: stringArrayField(values.riskFlags ?? []),
+    confidenceScore:
+      values.confidenceScore === null || values.confidenceScore === undefined
+        ? nullField()
+        : doubleField(values.confidenceScore)
   };
 }
 
@@ -392,7 +445,8 @@ function buildMessageFields(message: StoredChatMessage) {
     createdAt: timestampField(message.createdAt),
     source: stringField(message.source ?? ""),
     language: stringField(message.language ?? ""),
-    documents: stringArrayField(message.documents ?? [])
+    documents: stringArrayField(message.documents ?? []),
+    detectedIntent: stringField(message.detectedIntent ?? "")
   };
 }
 
@@ -457,7 +511,12 @@ export async function createChatConversation(owner: ChatOwner, firstMessage: str
     ownerName: owner.name,
     createdAt: now,
     updatedAt: now,
-    messageCount: 0
+    messageCount: 0,
+    conversationSummary: "",
+    lastTopic: "",
+    lastIntent: "",
+    riskFlags: [],
+    confidenceScore: null
   };
 
   await patchDocument(
@@ -555,6 +614,11 @@ export async function updateChatConversation(
     preview?: string;
     updatedAt?: string;
     messageCount?: number;
+    conversationSummary?: string;
+    lastTopic?: string;
+    lastIntent?: string;
+    riskFlags?: string[];
+    confidenceScore?: number | null;
   }
 ) {
   const nextConversation: ChatConversationSummary = {
@@ -564,7 +628,21 @@ export async function updateChatConversation(
         ? createPreview(updates.preview)
         : conversation.preview,
     updatedAt: updates.updatedAt ?? conversation.updatedAt,
-    messageCount: updates.messageCount ?? conversation.messageCount
+    messageCount: updates.messageCount ?? conversation.messageCount,
+    conversationSummary:
+      updates.conversationSummary !== undefined
+        ? updates.conversationSummary
+        : conversation.conversationSummary,
+    lastTopic:
+      updates.lastTopic !== undefined ? updates.lastTopic : conversation.lastTopic,
+    lastIntent:
+      updates.lastIntent !== undefined ? updates.lastIntent : conversation.lastIntent,
+    riskFlags:
+      updates.riskFlags !== undefined ? updates.riskFlags : conversation.riskFlags,
+    confidenceScore:
+      updates.confidenceScore !== undefined
+        ? updates.confidenceScore
+        : conversation.confidenceScore
   };
 
   await patchDocument(

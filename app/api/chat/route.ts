@@ -2,7 +2,6 @@ import { randomUUID } from "crypto";
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import {
   createChatConversation,
   createChatOwner,
@@ -16,7 +15,14 @@ import {
   type StoredChatMessage
 } from "@/lib/firestoreChatStore";
 import { getMockTutorReply, type TutorMessageSource } from "@/lib/mockChat";
+import { getRequestUser } from "@/lib/requestUser";
 import { isReplyLanguage, ReplyLanguage } from "@/lib/replyLanguage";
+import { getStudentProfileMemoryPatch } from "@/lib/studentProfile";
+import {
+  createStudentProfileOwner,
+  getStudentProfile,
+  saveStudentProfile
+} from "@/lib/studentProfileStore";
 
 export const runtime = "nodejs";
 
@@ -31,6 +37,17 @@ type ChatPersistence = {
   owner: ChatOwner;
   conversation: ChatConversationSummary;
   previousMessageCount: number;
+};
+
+type FinalizeResponseDetails = {
+  detectedIntent?: string;
+  conversationUpdates?: {
+    conversationSummary?: string;
+    lastTopic?: string;
+    lastIntent?: string;
+    riskFlags?: string[];
+    confidenceScore?: number | null;
+  };
 };
 
 function getApiErrorStatus(error: unknown) {
@@ -58,6 +75,7 @@ function createStoredMessage(
     source?: TutorMessageSource;
     documents?: string[];
     language?: ReplyLanguage;
+    detectedIntent?: string;
   }
 ): StoredChatMessage {
   return {
@@ -67,43 +85,48 @@ function createStoredMessage(
     createdAt: new Date().toISOString(),
     source: details?.source,
     documents: details?.documents,
-    language: details?.language
+    language: details?.language,
+    detectedIntent: details?.detectedIntent
   };
 }
 
 async function preparePersistence(details: {
+  requestUser: Awaited<ReturnType<typeof getRequestUser>>;
   conversationId: string;
   message: string;
   clientMessageId: string;
   replyLanguage: ReplyLanguage;
 }) {
+  const userMessage = createStoredMessage("user", details.message, {
+    id: details.clientMessageId,
+    language: details.replyLanguage
+  });
+
   if (!isChatHistoryConfigured()) {
     return {
       persistence: null,
-      history: [] as StoredChatMessage[]
+      history: [] as StoredChatMessage[],
+      userMessage
     };
   }
 
-  const session = await auth();
-  const email = session?.user?.email;
-
-  if (!email) {
+  if (!details.requestUser?.email) {
     return {
       persistence: null,
-      history: [] as StoredChatMessage[]
+      history: [] as StoredChatMessage[],
+      userMessage
     };
   }
 
   try {
-    const owner = createChatOwner(email, session.user?.name);
+    const owner = createChatOwner(
+      details.requestUser.email,
+      details.requestUser.name
+    );
     const conversation = details.conversationId
       ? await getChatConversation(owner, details.conversationId)
       : await createChatConversation(owner, details.message);
     const history = await getRecentChatMessages(owner, conversation.id, 20);
-    const userMessage = createStoredMessage("user", details.message, {
-      id: details.clientMessageId,
-      language: details.replyLanguage
-    });
 
     await saveChatMessage(owner, conversation.id, userMessage);
 
@@ -113,14 +136,16 @@ async function preparePersistence(details: {
         conversation,
         previousMessageCount: conversation.messageCount
       },
-      history
+      history,
+      userMessage
     };
   } catch (error) {
     console.error("Chat persistence setup failed:", error);
 
     return {
       persistence: null,
-      history: [] as StoredChatMessage[]
+      history: [] as StoredChatMessage[],
+      userMessage
     };
   }
 }
@@ -128,7 +153,8 @@ async function preparePersistence(details: {
 async function finalizeResponse(
   payload: ChatResponsePayload,
   persistence: ChatPersistence | null,
-  replyLanguage: ReplyLanguage
+  replyLanguage: ReplyLanguage,
+  details: FinalizeResponseDetails = {}
 ) {
   let conversation = persistence?.conversation ?? null;
   let assistantMessage: StoredChatMessage | null = null;
@@ -137,7 +163,8 @@ async function finalizeResponse(
     assistantMessage = createStoredMessage("assistant", payload.reply, {
       source: payload.source,
       documents: payload.documents,
-      language: replyLanguage
+      language: replyLanguage,
+      detectedIntent: details.detectedIntent
     });
 
     try {
@@ -152,7 +179,12 @@ async function finalizeResponse(
         {
           preview: payload.reply,
           updatedAt: assistantMessage.createdAt,
-          messageCount: persistence.previousMessageCount + 2
+          messageCount: persistence.previousMessageCount + 2,
+          conversationSummary: details.conversationUpdates?.conversationSummary,
+          lastTopic: details.conversationUpdates?.lastTopic,
+          lastIntent: details.conversationUpdates?.lastIntent,
+          riskFlags: details.conversationUpdates?.riskFlags,
+          confidenceScore: details.conversationUpdates?.confidenceScore
         }
       );
     } catch (error) {
@@ -169,6 +201,7 @@ async function finalizeResponse(
 
 export async function POST(request: NextRequest) {
   try {
+    const requestUser = await getRequestUser(request);
     const body = (await request.json()) as {
       message?: unknown;
       replyLanguage?: unknown;
@@ -190,33 +223,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { persistence, history } = await preparePersistence({
+    const { persistence, history, userMessage } = await preparePersistence({
+      requestUser,
       conversationId,
       message,
       clientMessageId,
       replyLanguage
     });
+    const context = history.map((historyMessage) => ({
+      role: historyMessage.role,
+      content: historyMessage.content
+    }));
+    const conversationSummary = persistence?.conversation.conversationSummary || "";
+    const profileOwner =
+      requestUser?.email
+        ? createStudentProfileOwner(requestUser.email, requestUser.name)
+        : null;
+    let studentProfile = null;
 
-    let knowledgeSearch: {
-      matches: Array<{
-        fileName: string;
-        relativePath: string;
-        text: string;
-        score: number;
-      }>;
-      hasDocuments: boolean;
-      shouldUseKnowledge: boolean;
-    } = {
-      matches: [],
-      hasDocuments: false,
-      shouldUseKnowledge: false
-    };
-
-    try {
-      const { searchKnowledgeBase } = await import("@/lib/knowledgeBase");
-      knowledgeSearch = await searchKnowledgeBase(message);
-    } catch (error) {
-      console.error("Knowledge base load error:", error);
+    if (profileOwner) {
+      try {
+        studentProfile = await getStudentProfile(profileOwner);
+      } catch (error) {
+        console.error("Student profile load failed:", error);
+      }
     }
 
     if (!process.env.GEMINI_API_KEY) {
@@ -256,21 +286,178 @@ export async function POST(request: NextRequest) {
         replyLanguage
       );
     }
+    let intentResult: Awaited<
+      ReturnType<typeof geminiHelpers.classifyGuidonIntent>
+    > | null = null;
 
-    const context = history.map((historyMessage) => ({
-      role: historyMessage.role,
-      content: historyMessage.content
-    }));
+    try {
+      intentResult = await geminiHelpers.classifyGuidonIntent(
+        message,
+        context,
+        studentProfile,
+        conversationSummary
+      );
+    } catch (error) {
+      console.error("Intent classification failed:", error);
+    }
+
+    const safeIntentResult = intentResult ?? {
+      primaryIntent: "unclear" as const,
+      secondaryIntent: "",
+      topic: "",
+      isFollowUp: false,
+      missingInformation: [],
+      confidence: 0,
+      shouldAskClarification: false,
+      clarificationQuestion: ""
+    };
+
+    if (persistence) {
+      try {
+        await saveChatMessage(
+          persistence.owner,
+          persistence.conversation.id,
+          {
+            ...userMessage,
+            detectedIntent: safeIntentResult.primaryIntent
+          }
+        );
+      } catch (error) {
+        console.error("User intent save failed:", error);
+      }
+    }
+
+    if (safeIntentResult.shouldAskClarification) {
+      const clarificationQuestion =
+        safeIntentResult.clarificationQuestion ||
+        "Could you tell me which part you mean so I can help accurately?";
+
+      return finalizeResponse(
+        {
+          reply: clarificationQuestion,
+          source: "web",
+          knowledgeUsed: false
+        },
+        persistence,
+        replyLanguage,
+        {
+          detectedIntent: safeIntentResult.primaryIntent,
+          conversationUpdates: {
+            lastTopic: safeIntentResult.topic,
+            lastIntent: safeIntentResult.primaryIntent,
+            confidenceScore: safeIntentResult.confidence
+          }
+        }
+      );
+    }
+
+    let rewriteResult: Awaited<
+      ReturnType<typeof geminiHelpers.rewriteGuidonQuestion>
+    > | null = null;
+
+    try {
+      rewriteResult = await geminiHelpers.rewriteGuidonQuestion(
+        message,
+        safeIntentResult,
+        context,
+        studentProfile,
+        conversationSummary
+      );
+    } catch (error) {
+      console.error("Query rewrite failed:", error);
+    }
+
+    const safeRewriteResult = rewriteResult ?? {
+      rewrittenQuestion: message,
+      assumptionsUsed: [],
+      ambiguityLevel: "medium" as const
+    };
+    const searchQuery = safeRewriteResult.rewrittenQuestion || message;
+    let knowledgeSearch: {
+      matches: Array<{
+        fileName: string;
+        relativePath: string;
+        text: string;
+        score: number;
+      }>;
+      hasDocuments: boolean;
+      shouldUseKnowledge: boolean;
+    } = {
+      matches: [],
+      hasDocuments: false,
+      shouldUseKnowledge: false
+    };
+
+    try {
+      const { searchKnowledgeBase } = await import("@/lib/knowledgeBase");
+      knowledgeSearch = await searchKnowledgeBase(searchQuery);
+    } catch (error) {
+      console.error("Knowledge base load error:", error);
+    }
+
+    const answerContext = {
+      conversationSummary,
+      intentResult: safeIntentResult,
+      rewriteResult: safeRewriteResult
+    };
+    const finalizeMetadata = {
+      detectedIntent: safeIntentResult.primaryIntent,
+      conversationUpdates: {
+        lastTopic: safeIntentResult.topic,
+        lastIntent: safeIntentResult.primaryIntent,
+        confidenceScore: safeIntentResult.confidence
+      }
+    };
 
     if (knowledgeSearch.shouldUseKnowledge) {
       const knowledgeReply = await geminiHelpers.getGeminiKnowledgeReply(
         message,
         knowledgeSearch.matches,
         replyLanguage,
-        context
+        context,
+        studentProfile,
+        answerContext
       );
 
       if (knowledgeReply && !knowledgeReply.needsWebFallback) {
+        let memoryUpdate: Awaited<
+          ReturnType<typeof geminiHelpers.updateGuidonMemory>
+        > | null = null;
+
+        try {
+          memoryUpdate = await geminiHelpers.updateGuidonMemory(
+            message,
+            knowledgeReply.reply,
+            safeIntentResult,
+            studentProfile,
+            conversationSummary
+          );
+        } catch (error) {
+          console.error("Memory update failed:", error);
+        }
+
+        const nextConversationSummary =
+          memoryUpdate?.updatedConversationSummary || conversationSummary;
+        const nextLastTopic =
+          memoryUpdate?.lastTopic || safeIntentResult.topic || "";
+        const nextLastIntent =
+          memoryUpdate?.lastIntent || safeIntentResult.primaryIntent;
+
+        if (profileOwner && studentProfile && memoryUpdate?.updatedProfile) {
+          const profilePatch = getStudentProfileMemoryPatch(
+            studentProfile,
+            memoryUpdate.updatedProfile
+          );
+
+          if (Object.keys(profilePatch).length) {
+            try {
+              await saveStudentProfile(profileOwner, profilePatch);
+            } catch (error) {
+              console.error("Student profile memory save failed:", error);
+            }
+          }
+        }
+
         return finalizeResponse(
           {
             reply: knowledgeReply.reply,
@@ -279,7 +466,17 @@ export async function POST(request: NextRequest) {
             documents: knowledgeSearch.matches.map((match) => match.fileName)
           },
           persistence,
-          replyLanguage
+          replyLanguage,
+          {
+            ...finalizeMetadata,
+            conversationUpdates: {
+              conversationSummary: nextConversationSummary,
+              lastTopic: nextLastTopic,
+              lastIntent: nextLastIntent,
+              riskFlags: memoryUpdate?.riskFlags ?? [],
+              confidenceScore: safeIntentResult.confidence
+            }
+          }
         );
       }
     }
@@ -287,7 +484,9 @@ export async function POST(request: NextRequest) {
     const reply = await geminiHelpers.getGeminiWebReply(
       message,
       replyLanguage,
-      context
+      context,
+      studentProfile,
+      answerContext
     );
 
     if (!reply) {
@@ -297,6 +496,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let memoryUpdate: Awaited<
+      ReturnType<typeof geminiHelpers.updateGuidonMemory>
+    > | null = null;
+
+    try {
+      memoryUpdate = await geminiHelpers.updateGuidonMemory(
+        message,
+        reply,
+        safeIntentResult,
+        studentProfile,
+        conversationSummary
+      );
+    } catch (error) {
+      console.error("Memory update failed:", error);
+    }
+
+    const nextConversationSummary =
+      memoryUpdate?.updatedConversationSummary || conversationSummary;
+    const nextLastTopic =
+      memoryUpdate?.lastTopic || safeIntentResult.topic || "";
+    const nextLastIntent =
+      memoryUpdate?.lastIntent || safeIntentResult.primaryIntent;
+
+    if (profileOwner && studentProfile && memoryUpdate?.updatedProfile) {
+      const profilePatch = getStudentProfileMemoryPatch(
+        studentProfile,
+        memoryUpdate.updatedProfile
+      );
+
+      if (Object.keys(profilePatch).length) {
+        try {
+          await saveStudentProfile(profileOwner, profilePatch);
+        } catch (error) {
+          console.error("Student profile memory save failed:", error);
+        }
+      }
+    }
+
     return finalizeResponse(
       {
         reply,
@@ -304,7 +541,17 @@ export async function POST(request: NextRequest) {
         knowledgeUsed: false
       },
       persistence,
-      replyLanguage
+      replyLanguage,
+      {
+        ...finalizeMetadata,
+        conversationUpdates: {
+          conversationSummary: nextConversationSummary,
+          lastTopic: nextLastTopic,
+          lastIntent: nextLastIntent,
+          riskFlags: memoryUpdate?.riskFlags ?? [],
+          confidenceScore: safeIntentResult.confidence
+        }
+      }
     );
   } catch (error) {
     console.error("Chat route error:", error);

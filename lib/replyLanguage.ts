@@ -14,9 +14,9 @@ export const replyLanguageProfiles = {
     recognitionLang: "en-IN",
     speechLang: "en-IN",
     helperText:
-      "Best for a natural English-Hindi mix spoken in Roman script.",
+      "Best when students want replies to adapt to English, Hindi, or a natural mix.",
     replyInstruction:
-      "Reply in simple Hinglish. Use a natural mix of English and Hindi written in Latin script. Do not use Devanagari unless the student asks.",
+      "Reply in the student's preferred language style. If they ask in Hindi, reply in Hindi. If they use Hinglish or a mixed style, match that naturally. If their preference is unclear, use simple English.",
     mockFallback: "hinglish"
   },
   hindi: {

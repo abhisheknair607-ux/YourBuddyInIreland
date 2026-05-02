@@ -31,8 +31,8 @@ export const HOME_STARTER_PROMPTS = [
       "Help me plan education loans and living costs for studying in Ireland."
   },
   {
-    label: "Hinglish support",
+    label: "Multilingual",
     prompt:
-      "Mujhe Ireland study plan ko simple Hinglish mein step by step samjhao."
+      "Explain my Ireland study plan step by step in the language I use, and switch naturally if I mix English with an Indian language."
   }
 ] as const;

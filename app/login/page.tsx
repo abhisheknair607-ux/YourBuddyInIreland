@@ -9,9 +9,12 @@ import { getProviders, signIn, useSession } from "next-auth/react";
 
 import { AnimatedGradientBackground } from "@/components/AnimatedGradientBackground";
 import { BrandLogo } from "@/components/BrandLogo";
+import { CompactMobilePageHeader } from "@/components/CompactMobilePageHeader";
+import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { PageTransition } from "@/components/PageTransition";
 import { PrivacyNotice } from "@/components/PrivacyNotice";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import {
   getMockUser,
   hasAcceptedPrivacy,
@@ -120,32 +123,40 @@ export default function LoginPage() {
 
     setBusyAction("google");
     setErrorMessage("");
+    trackAnalyticsEvent("login_google_click", {
+      mode
+    });
     await signIn("google", { callbackUrl: "/dashboard" });
   };
 
   return (
     <div className="relative min-h-[100dvh] overflow-x-hidden">
       <AnimatedGradientBackground />
+      <FloatingStudyIcons />
 
       <PageTransition className="relative z-10 flex min-h-[100dvh] flex-col pt-safe">
-        <div className="page-shell flex flex-col gap-3 py-4 tablet:flex-row tablet:items-center tablet:justify-between tablet:py-5">
-          <Link
-            href="/"
-            className="inline-flex min-h-[44px] items-center self-start rounded-[1.4rem] border border-white/70 bg-white/80 px-3 py-2 backdrop-blur-xl transition hover:border-slate-300 hover:bg-white"
-          >
-            <BrandLogo size="sm" className="w-[132px] tablet:w-[150px]" />
-          </Link>
-          <button
-            type="button"
-            onClick={() => setPrivacyModalOpen(true)}
-            className="min-h-[44px] self-stretch rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 tablet:self-auto"
-          >
-            Privacy Policy
-          </button>
+        <div className="page-shell py-3 tablet:py-5">
+          <CompactMobilePageHeader />
+
+          <div className="hidden tablet:flex items-center justify-between gap-3">
+            <Link
+              href="/"
+              className="inline-flex min-h-[44px] items-center self-start rounded-[1.4rem] border border-white/70 bg-white/80 px-3 py-2 backdrop-blur-xl transition hover:border-slate-300 hover:bg-white"
+            >
+              <BrandLogo size="sm" className="w-[132px] tablet:w-[150px]" />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setPrivacyModalOpen(true)}
+              className="min-h-[44px] self-stretch rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 tablet:self-auto"
+            >
+              Privacy Policy
+            </button>
+          </div>
         </div>
 
-        <div className="page-shell grid flex-1 items-start gap-6 py-4 tablet:gap-8 tablet:py-6 laptop:grid-cols-[0.96fr_1.04fr] laptop:items-center laptop:gap-10 laptop:py-8">
-          <div className="order-2 max-w-2xl space-y-6 laptop:order-1 laptop:space-y-7">
+        <div className="page-shell grid flex-1 items-start gap-4 py-2 tablet:gap-8 tablet:py-6 laptop:grid-cols-[0.96fr_1.04fr] laptop:items-center laptop:gap-10 laptop:py-8">
+          <div className="order-2 hidden max-w-2xl space-y-6 tablet:block laptop:order-1 laptop:space-y-7">
             <div className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700 backdrop-blur-xl">
               <ShieldCheck className="h-4 w-4" />
               Secure sign-in for your Ireland planning dashboard
@@ -188,7 +199,7 @@ export default function LoginPage() {
             whileHover={{ y: -4 }}
             className="order-1 mx-auto w-full max-w-xl laptop:order-2 laptop:max-w-none"
           >
-            <div className="glass-card surface-ring rounded-[2rem] p-5 transition tablet:p-6 laptop:p-8">
+            <div className="glass-card surface-ring rounded-[1.75rem] p-4 transition tablet:rounded-[2rem] tablet:p-6 laptop:p-8">
               <div className="mb-6 flex rounded-full border border-slate-200/80 bg-slate-50/80 p-1">
                 {(["login", "signup"] as const).map((option) => (
                   <button
@@ -266,6 +277,16 @@ export default function LoginPage() {
               )}
             </div>
           </motion.div>
+        </div>
+
+        <div className="page-shell pb-5 tablet:hidden">
+          <button
+            type="button"
+            onClick={() => setPrivacyModalOpen(true)}
+            className="min-h-[44px] w-full rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-sm font-medium text-slate-700 shadow-[0_10px_26px_rgba(15,23,42,0.06)] backdrop-blur-xl"
+          >
+            Privacy Policy
+          </button>
         </div>
       </PageTransition>
 

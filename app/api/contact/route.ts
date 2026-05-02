@@ -1,11 +1,9 @@
-import nodemailer from "nodemailer";
 import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { getSmtpConfig, sendSmtpMail } from "@/lib/serverMail";
 
 export const runtime = "nodejs";
-
-const DEFAULT_CONTACT_EMAIL = "abhisheknair607@gmail.com";
 
 type ContactKind = "feedback" | "get-in-touch";
 
@@ -24,37 +22,6 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-function getSmtpConfig() {
-  const host = getString(process.env.SMTP_HOST);
-  const user = getString(process.env.SMTP_USER);
-  const pass = getString(process.env.SMTP_PASS).replace(/\s/g, "");
-
-  if (!host || !user || !pass) {
-    return null;
-  }
-
-  const configuredPort = Number(process.env.SMTP_PORT || "");
-  const secure =
-    process.env.SMTP_SECURE === "true" ||
-    (Number.isFinite(configuredPort) && configuredPort === 465);
-  const port = Number.isFinite(configuredPort)
-    ? configuredPort
-    : secure
-      ? 465
-      : 587;
-
-  return {
-    host,
-    port,
-    secure,
-    rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false",
-    user,
-    pass,
-    from: getString(process.env.SMTP_FROM) || user,
-    to: getString(process.env.CONTACT_EMAIL_TO) || DEFAULT_CONTACT_EMAIL
-  };
 }
 
 export async function POST(request: NextRequest) {
@@ -140,21 +107,7 @@ export async function POST(request: NextRequest) {
   `;
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: smtp.host,
-      port: smtp.port,
-      secure: smtp.secure,
-      auth: {
-        user: smtp.user,
-        pass: smtp.pass
-      },
-      tls: {
-        rejectUnauthorized: smtp.rejectUnauthorized
-      }
-    });
-
-    await transporter.sendMail({
-      from: `"Guidon - ${senderName.replace(/"/g, "'")}" <${smtp.from}>`,
+    await sendSmtpMail({
       to: smtp.to,
       replyTo: senderEmail,
       subject,
@@ -163,7 +116,8 @@ export async function POST(request: NextRequest) {
       headers: {
         "X-Guidon-Original-From": senderEmail,
         "X-Guidon-Contact-Kind": kind
-      }
+      },
+      fromName: `Guidon - ${senderName}`
     });
 
     return NextResponse.json({ ok: true });

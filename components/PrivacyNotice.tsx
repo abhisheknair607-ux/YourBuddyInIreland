@@ -44,13 +44,13 @@ export function PrivacyNotice({
     <AnimatePresence>
       {isOpen ? (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-3 backdrop-blur-md tablet:items-center tablet:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/35 p-2 backdrop-blur-md tablet:items-center tablet:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="glass-card surface-ring relative max-h-[calc(100dvh-1rem)] w-full max-w-lg overflow-y-auto rounded-[1.75rem] p-5 tablet:max-h-[85vh] tablet:rounded-[2rem] tablet:p-8"
+            className="glass-card surface-ring thin-scrollbar relative max-h-[calc(100dvh-0.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.35rem] p-4 tablet:max-h-[85vh] tablet:rounded-[2rem] tablet:p-8"
             initial={{ opacity: 0, scale: 0.96, y: 18 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 12 }}
@@ -67,7 +67,7 @@ export function PrivacyNotice({
               </button>
             ) : null}
 
-            <div className="mb-6 flex flex-col items-center gap-3 text-center tablet:flex-row tablet:items-center tablet:text-left">
+            <div className="mb-5 flex flex-col items-start gap-3 text-left tablet:mb-6 tablet:flex-row tablet:items-center">
               <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
                 <ShieldCheck className="h-6 w-6" />
               </div>
@@ -75,7 +75,7 @@ export function PrivacyNotice({
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-600">
                   Privacy Notice
                 </p>
-                <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+                <h2 className="mt-1 text-xl font-semibold leading-tight text-slate-950 tablet:text-2xl">
                   Safe study support, with clear privacy rules
                 </h2>
               </div>
@@ -85,7 +85,7 @@ export function PrivacyNotice({
               {privacyPoints.map((point) => (
                 <div
                   key={point}
-                  className="flex items-start justify-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 text-center tablet:justify-start tablet:text-left"
+                  className="flex items-start gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4 text-left"
                 >
                   <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-600" />
                   <p className="text-sm leading-6 text-slate-700">{point}</p>
@@ -93,7 +93,7 @@ export function PrivacyNotice({
               ))}
             </div>
 
-            <label className="mt-6 flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-4 text-sm text-slate-700">
+            <label className="mt-5 flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-4 text-sm text-slate-700 tablet:mt-6">
               <input
                 type="checkbox"
                 checked={accepted}
@@ -110,7 +110,7 @@ export function PrivacyNotice({
               type="button"
               onClick={handleContinue}
               disabled={!accepted}
-              className="mt-6 min-h-[44px] w-full rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white transition hover:scale-[1.01] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 min-h-[48px] w-full rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white transition hover:scale-[1.01] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 tablet:mt-6"
             >
               Continue
             </button>

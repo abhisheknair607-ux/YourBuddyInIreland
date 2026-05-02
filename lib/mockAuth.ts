@@ -74,6 +74,16 @@ export const setPrivacyAccepted = (accepted: boolean) => {
   }
 
   storage.setItem(PRIVACY_ACCEPTED_KEY, JSON.stringify(accepted));
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("guidon:privacy-accepted", {
+        detail: {
+          accepted
+        }
+      })
+    );
+  }
 };
 
 export const hasAcceptedPrivacy = () => {
