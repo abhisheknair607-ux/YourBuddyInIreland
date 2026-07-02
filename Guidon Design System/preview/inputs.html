@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:24px;background:#f5f9ff;font-family:var(--font-inter)}
+.stack{display:flex;flex-direction:column;gap:12px;max-width:520px}
+.input{display:flex;align-items:center;height:46px;border-radius:9999px;border:1px solid #e2e8f0;background:#fff;padding:0 16px;font-size:14px;color:#0f172a}
+.input.focus{border-color:#38bdf8;box-shadow:0 0 0 4px rgba(56,189,248,.12)}
+.composer{border:1px solid rgba(255,255,255,.8);background:rgba(255,255,255,.85);border-radius:20px;padding:10px 12px;box-shadow:0 12px 30px rgba(15,23,42,.08);display:flex;flex-direction:column;gap:8px}
+.composer textarea{border:0;outline:0;resize:none;font:inherit;background:transparent;color:#0f172a;width:100%}
+.toolbar{display:flex;justify-content:space-between;align-items:center}
+.send{width:36px;height:36px;border-radius:9999px;background:linear-gradient(135deg,#0ea5e9,#2563eb);color:#fff;border:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.lang{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#475569;background:#fff;border:1px solid #e2e8f0;border-radius:9999px;padding:4px 10px;height:30px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd;border-radius:9999px;padding:6px 12px;font-weight:500}
+</style></head><body>
+<div class="stack">
+  <div class="input"><span style="color:#94a3b8">Search links…</span></div>
+  <div class="input focus" style="color:#0f172a">Compare MSc Data Analytics options</div>
+  <div class="composer">
+    <textarea rows="1" placeholder="Message Guidon"></textarea>
+    <div class="toolbar"><span class="lang">🌐 Hinglish ▾</span><button class="send">↑</button></div>
+  </div>
+  <div><span class="chip">Verified Answer</span></div>
+</div>
+</body></html>

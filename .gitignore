@@ -21,6 +21,10 @@ localhostrun-*.log
 localhostrun-*.err.log
 localtunnel-*.log
 localtunnel-*.err.log
+devserver*.log
+preview-*.log
+preview-*.out.log
+preview-*.err.log
 start-preview-*.cmd
 start-guidon-dev-*.cmd
 auth-start*.log
@@ -30,3 +34,6 @@ netlify-api-*.json
 netlify-node-api-*.txt
 netlify-node-api-*.json
 tsconfig.tsbuildinfo
+screenshots/
+npm
+ChatGPT Image*.png

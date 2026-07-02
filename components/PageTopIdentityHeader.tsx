@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { BrandLogo } from "@/components/BrandLogo";
 
@@ -7,12 +8,14 @@ type PageTopIdentityHeaderProps = {
   label: string;
   icon: LucideIcon;
   homeHref?: string;
+  actions?: ReactNode;
 };
 
 export function PageTopIdentityHeader({
   label,
   icon: Icon,
-  homeHref = "/"
+  homeHref = "/",
+  actions
 }: PageTopIdentityHeaderProps) {
   return (
     <header className="page-shell shrink-0 py-3 tablet:py-5">
@@ -32,6 +35,8 @@ export function PageTopIdentityHeader({
           <Icon className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate leading-none">{label}</span>
         </div>
+
+        {actions ? <div className="col-span-2 flex justify-end tablet:col-auto">{actions}</div> : null}
       </div>
     </header>
   );

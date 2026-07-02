@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getProviders, signIn, useSession } from "next-auth/react";
 
@@ -14,6 +14,7 @@ import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { PageTransition } from "@/components/PageTransition";
 import { PrivacyNotice } from "@/components/PrivacyNotice";
+import { VersionSwitchLink } from "@/components/VersionSwitchLink";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import {
   getMockUser,
@@ -34,6 +35,7 @@ type AuthProviderMap = Record<
 
 export default function LoginPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [mode, setMode] = useState<AuthMode>("login");
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
@@ -44,6 +46,15 @@ export default function LoginPage() {
     {}
   );
   const [providersLoaded, setProvidersLoaded] = useState(false);
+  const isV2Experience = pathname.startsWith("/v2");
+  const dashboardHref = isV2Experience ? "/v2/chat" : "/dashboard";
+  const homeHref = isV2Experience ? "/v2" : "/";
+  const switchHref = isV2Experience ? "/login" : "/v2/register";
+  const switchLabel = isV2Experience ? "Current Version" : "Open V2";
+  const versionSwitchSource = isV2Experience ? "v2_register" : "current_login";
+  const analyticsEventName = isV2Experience
+    ? "v2_login_google_click"
+    : "login_google_click";
 
   useEffect(() => {
     if (status === "loading") {
@@ -51,7 +62,7 @@ export default function LoginPage() {
     }
 
     if (session?.user) {
-      router.replace("/dashboard");
+      router.replace(dashboardHref);
       return;
     }
 
@@ -65,7 +76,7 @@ export default function LoginPage() {
     if (!accepted) {
       setPrivacyModalOpen(true);
     }
-  }, [router, session, status]);
+  }, [dashboardHref, router, session, status]);
 
   useEffect(() => {
     let isMounted = true;
@@ -123,10 +134,10 @@ export default function LoginPage() {
 
     setBusyAction("google");
     setErrorMessage("");
-    trackAnalyticsEvent("login_google_click", {
+    trackAnalyticsEvent(analyticsEventName, {
       mode
     });
-    await signIn("google", { callbackUrl: "/dashboard" });
+    await signIn("google", { callbackUrl: dashboardHref });
   };
 
   return (
@@ -136,22 +147,43 @@ export default function LoginPage() {
 
       <PageTransition className="relative z-10 flex min-h-[100dvh] flex-col pt-safe">
         <div className="page-shell py-3 tablet:py-5">
-          <CompactMobilePageHeader />
+          <CompactMobilePageHeader
+            homeHref={homeHref}
+            trailing={
+              <VersionSwitchLink
+                href={switchHref}
+                label={switchLabel}
+                fromVersion={isV2Experience ? "v2" : "current"}
+                toVersion={isV2Experience ? "current" : "v2"}
+                source={versionSwitchSource}
+                className="min-h-[40px] px-3 text-xs"
+              />
+            }
+          />
 
           <div className="hidden tablet:flex items-center justify-between gap-3">
             <Link
-              href="/"
+              href={homeHref}
               className="inline-flex min-h-[44px] items-center self-start rounded-[1.4rem] border border-white/70 bg-white/80 px-3 py-2 backdrop-blur-xl transition hover:border-slate-300 hover:bg-white"
             >
               <BrandLogo size="sm" className="w-[132px] tablet:w-[150px]" />
             </Link>
-            <button
-              type="button"
-              onClick={() => setPrivacyModalOpen(true)}
-              className="min-h-[44px] self-stretch rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 tablet:self-auto"
-            >
-              Privacy Policy
-            </button>
+            <div className="flex items-center gap-3">
+              <VersionSwitchLink
+                href={switchHref}
+                label={switchLabel}
+                fromVersion={isV2Experience ? "v2" : "current"}
+                toVersion={isV2Experience ? "current" : "v2"}
+                source={versionSwitchSource}
+              />
+              <button
+                type="button"
+                onClick={() => setPrivacyModalOpen(true)}
+                className="min-h-[44px] self-stretch rounded-full border border-slate-200/80 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 tablet:self-auto"
+              >
+                Privacy Policy
+              </button>
+            </div>
           </div>
         </div>
 

@@ -1,0 +1,14 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>body{margin:0;padding:0;background:linear-gradient(180deg,#fdfefe 0%,#f5f9ff 45%,#eef5ff 100%);font-family:var(--font-inter);min-height:200px;position:relative;overflow:hidden}
+.blob{position:absolute;border-radius:9999px;filter:blur(60px)}
+.b1{left:-12%;top:-8%;width:300px;height:300px;background:rgba(125,211,252,.55)}
+.b2{right:-10%;top:18%;width:340px;height:340px;background:rgba(165,243,252,.5)}
+.b3{bottom:-30%;left:24%;width:380px;height:380px;background:rgba(199,210,254,.45)}
+.mesh{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.25) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(to bottom,#fff 0%,transparent 90%)}
+.label{position:absolute;left:24px;bottom:20px;font-size:12px;color:#0369a1;font-weight:600;text-transform:uppercase;letter-spacing:.24em;z-index:2}
+</style></head><body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<div class="mesh"></div>
+<div class="label">Animated background · 3 blobs + mesh</div>
+</body></html>

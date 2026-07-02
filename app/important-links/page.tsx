@@ -18,12 +18,14 @@ import {
   Zap
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AnimatedGradientBackground } from "@/components/AnimatedGradientBackground";
 import { BrandLogo } from "@/components/BrandLogo";
 import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { PageTransition } from "@/components/PageTransition";
+import { VersionSwitchLink } from "@/components/VersionSwitchLink";
 import {
   importantReferenceSections,
   type ImportantReferenceItem,
@@ -175,12 +177,16 @@ function getItemKey(sectionId: string, item: ImportantReferenceItem) {
 }
 
 export default function ImportantLinksPage() {
+  const pathname = usePathname();
   const [query, setQuery] = useState("");
   const [expandedSectionId, setExpandedSectionId] = useState(DEFAULT_SECTION_ID);
   const [expandedItemsBySection, setExpandedItemsBySection] =
     useState<ExpandedItemsBySection>({});
   const resultsPaneRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const isV2Experience = pathname.startsWith("/v2");
+  const homeHref = isV2Experience ? "/v2" : "/";
+  const counterpartHref = isV2Experience ? "/important-links" : "/v2/resources";
 
   const normalizedQuery = query.trim();
   const isSearchActive = normalizedQuery.length > 0;
@@ -259,7 +265,7 @@ export default function ImportantLinksPage() {
         <header className="page-shell shrink-0 py-3 tablet:py-5">
           <div className="grid grid-cols-[132px_minmax(0,132px)] items-center justify-between gap-2 tablet:flex tablet:items-center tablet:justify-between tablet:gap-3">
             <Link
-              href="/"
+              href={homeHref}
               className="inline-flex h-[48px] w-[132px] shrink-0 items-center justify-center self-start overflow-hidden rounded-[1.2rem] border border-white/70 bg-white/80 px-2.5 py-1.5 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:border-slate-300 hover:bg-white tablet:h-[52px] tablet:w-auto tablet:px-3 tablet:py-2"
             >
               <BrandLogo
@@ -273,6 +279,15 @@ export default function ImportantLinksPage() {
               <BookOpen className="h-3.5 w-3.5 shrink-0" />
               <span className="leading-none">Resources Hub</span>
             </div>
+
+            <VersionSwitchLink
+              href={counterpartHref}
+              label={isV2Experience ? "Current Version" : "Open V2"}
+              fromVersion={isV2Experience ? "v2" : "current"}
+              toVersion={isV2Experience ? "current" : "v2"}
+              source={isV2Experience ? "v2_resources" : "current_resources"}
+              className="col-span-2 justify-self-end tablet:col-auto"
+            />
           </div>
         </header>
 

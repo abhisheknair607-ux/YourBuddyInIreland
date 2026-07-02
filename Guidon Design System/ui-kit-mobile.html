@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Guid-On · Mobile UI Kit · All 8 screens</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="colors_and_type.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  html,body{margin:0;padding:0;background:#eef4fb;font-family:var(--font-inter);color:var(--fg-primary);overflow-x:hidden}
+  .kit-page{max-width:1480px;margin:0 auto;padding:48px 32px 96px}
+  .kit-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:36px;flex-wrap:wrap}
+  .kit-crumb{font-size:11px;font-weight:600;color:#0369a1;text-transform:uppercase;letter-spacing:.24em}
+  .kit-toc{display:flex;gap:6px;flex-wrap:wrap;max-width:560px}
+  .kit-toc a{font-size:12px;color:#475569;background:#fff;border:1px solid #e2e8f0;border-radius:9999px;padding:6px 12px;text-decoration:none;font-weight:500;cursor:pointer}
+  .kit-toc a:hover{background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
+
+  section.kit-row{margin-top:80px;scroll-margin-top:24px}
+  .row-head{display:flex;align-items:baseline;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+  .row-head .num{font-family:var(--font-poppins);font-weight:600;font-size:18px;color:#cbd5e1}
+  .row-head h2{margin:0;font-family:var(--font-poppins);font-size:24px;font-weight:600;color:#020617;letter-spacing:-0.01em}
+  .row-head p{margin:0;font-size:13px;color:#64748b;max-width:580px;line-height:1.55}
+
+  .phones-row{display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start;justify-content:flex-start}
+  .phone-cap{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+  .phone-cap .label{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.16em}
+  .phone-cap .desc{font-size:12px;color:#64748b;max-width:360px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="mobile-pages-1.jsx"></script>
+<script type="text/babel" src="mobile-pages-2.jsx"></script>
+
+<script type="text/babel">
+  const SCREENS = [
+    { id: "home",      n: "01", t: "Homepage",          desc: "Marketing landing — gradient eyebrow, hero with brand-tinted headline word, trust strip with key numbers, six-feature stack, journey mini-timeline, gradient CTA band. Persistent bottom tab bar.", Comp: MHome },
+    { id: "demo",      n: "02", t: "Demo & Walkthrough", desc: "Six-step interactive tour with sticky step strip, real student persona cards, and the Free-vs-Pro comparison plus CTA. No signup required for any of it.", Comp: MDemo },
+    { id: "chatbot",   n: "03", t: "AI Chatbot",         desc: "Avatar header with live status. Conversation thread with verified-source citations. Suggested prompt chips above the composer. Free-message counter under the input.", Comp: MChatbot },
+    { id: "register",  n: "04", t: "Registration",       desc: "Three-step onboarding — brand-coloured hero with progress indicator, situation tiles, worry chips, home-state selector. Sticky CTA pinned to the bottom.", Comp: MRegister },
+    { id: "resources", n: "05", t: "Resource Hub",       desc: "Sticky search + 8 horizontally-scrollable category tabs. Cards with priority pills (Required/Important/Helpful), source URL, and last-verified date.", Comp: MResources },
+    { id: "forex",     n: "06", t: "Forex Notifier",     desc: "Live EUR/INR card paired with a brand-coloured 'Best service now' card. Quick converter with explicit fee-and-saving callout. Alert setup with notification method picker. 7-day history.", Comp: MForexM },
+    { id: "mentors",   n: "07", t: "Mentor Connect",     desc: "Sticky filter strip by university. Verified-mentor cards with online dot, rating, sessions, response time, topic tags, italic bio, and tap-to-connect CTA.", Comp: MMentors },
+    { id: "docs",      n: "08", t: "Document Builder",   desc: "Sticky title bar with live strength score pill. Step strip with the current section highlighted. Editable form area, AI tip card, live preview, and Review screen with sub-scores per section.", Comp: MDocs }
+  ];
+
+  const Frame = ({ s }) => {
+    const C = s.Comp;
+    return (
+      <section className="kit-row" id={s.id}>
+        <div className="row-head">
+          <div className="num">{s.n}</div>
+          <h2>{s.t}</h2>
+          <p>{s.desc}</p>
+        </div>
+        <div className="phones-row">
+          <div className="phone-cap">
+            <C />
+            <div className="label">{s.t}</div>
+            <div className="desc">Long-press to scroll inside the phone. All interactions are wired — try the wizards, change tabs, set alerts.</div>
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  const App = () => (
+    <div className="kit-page">
+      <header className="kit-header">
+        <div>
+          <div className="kit-crumb">Guid-On · UI Kit · Mobile · 8 screens</div>
+          <h1 style={{ fontFamily: "var(--font-poppins)", fontSize: 36, fontWeight: 600, color: "#020617", letterSpacing: "-0.02em", margin: "8px 0 6px", lineHeight: 1.1 }}>Every mobile surface, in your pocket.</h1>
+          <p style={{ fontSize: 15, color: "#475569", lineHeight: 1.6, margin: 0, maxWidth: 720 }}>Each screen is a real, interactive iPhone-framed prototype. Tap to navigate the wizards, change tabs, swipe categories, set forex alerts. Same content as the desktop kit, sized for a phone — same gradient, same glass, same brand voice.</p>
+        </div>
+        <div className="kit-toc">
+          {SCREENS.map((s) => (
+            <a key={s.id} onClick={() => document.getElementById(s.id).scrollIntoView({ behavior: "smooth", block: "start" })}>{s.n} · {s.t}</a>
+          ))}
+        </div>
+      </header>
+      {SCREENS.map((s) => <Frame key={s.id} s={s} />)}
+    </div>
+  );
+
+  function mount() {
+    if (typeof MHome === "undefined" || typeof MDemo === "undefined" || typeof MChatbot === "undefined" || typeof MRegister === "undefined" || typeof MResources === "undefined" || typeof MForexM === "undefined" || typeof MMentors === "undefined" || typeof MDocs === "undefined") {
+      return setTimeout(mount, 50);
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  }
+  mount();
+</script>
+</body>
+</html>

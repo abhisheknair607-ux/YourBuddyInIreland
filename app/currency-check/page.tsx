@@ -17,6 +17,7 @@ import {
   Trash2
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -25,6 +26,7 @@ import { ExchangeRateChart } from "@/components/ExchangeRateChart";
 import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { PageTransition } from "@/components/PageTransition";
 import { PageTopIdentityHeader } from "@/components/PageTopIdentityHeader";
+import { VersionSwitchLink } from "@/components/VersionSwitchLink";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getClientRequestHeaders } from "@/lib/clientRequestHeaders";
 import type {
@@ -209,6 +211,7 @@ function AlertRow({
 }
 
 export default function CurrencyCheckPage() {
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const previewUser = typeof window !== "undefined" ? getMockUser() : null;
   const hasAlertUser = Boolean(session?.user?.email || previewUser?.email);
@@ -237,6 +240,10 @@ export default function CurrencyCheckPage() {
   >("default");
   const [isRequestingBrowserPermission, setIsRequestingBrowserPermission] =
     useState(false);
+  const isV2Experience = pathname.startsWith("/v2");
+  const homeHref = isV2Experience ? "/v2" : "/";
+  const counterpartHref = isV2Experience ? "/currency-check" : "/v2/forex";
+  const authHref = isV2Experience ? "/v2/register" : "/login";
 
   const targetRate = getNumber(targetRateInput);
 
@@ -597,7 +604,20 @@ export default function CurrencyCheckPage() {
       <FloatingStudyIcons />
 
         <PageTransition className="relative z-10 flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden">
-        <PageTopIdentityHeader icon={Banknote} label="Currency Check" />
+        <PageTopIdentityHeader
+          icon={Banknote}
+          label="Currency Check"
+          homeHref={homeHref}
+          actions={
+            <VersionSwitchLink
+              href={counterpartHref}
+              label={isV2Experience ? "Current Version" : "Open V2"}
+              fromVersion={isV2Experience ? "v2" : "current"}
+              toVersion={isV2Experience ? "current" : "v2"}
+              source={isV2Experience ? "v2_forex" : "current_forex"}
+            />
+          }
+        />
 
         <main className="page-shell flex-1 min-h-0 pb-4 pt-1 tablet:pb-6">
           <div className="scrollbar-hidden h-full overflow-y-auto overscroll-contain pr-1 tablet:pr-2">
@@ -885,7 +905,7 @@ export default function CurrencyCheckPage() {
                       Sign in to save target alerts and receive email or browser notifications.
                     </p>
                     <Link
-                      href="/login"
+                      href={authHref}
                       className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-900"
                     >
                       Sign in to save alerts

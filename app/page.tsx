@@ -26,6 +26,7 @@ import { IntroScreen } from "@/components/IntroScreen";
 import { PageTransition } from "@/components/PageTransition";
 import { PrivacyNotice } from "@/components/PrivacyNotice";
 import { TypewriterText } from "@/components/TypewriterText";
+import { VersionSwitchLink } from "@/components/VersionSwitchLink";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { hasAcceptedPrivacy } from "@/lib/mockAuth";
 import {
@@ -197,7 +198,16 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: 0.18 }}
+                  className="flex flex-col gap-3"
                 >
+                  <VersionSwitchLink
+                    href="/v2"
+                    label="Open V2"
+                    fromVersion="current"
+                    toVersion="v2"
+                    source="current_home"
+                    className="w-full justify-center rounded-[1.35rem] border-white/80 bg-white/82"
+                  />
                   <Link
                     href="/login"
                     onClick={() =>

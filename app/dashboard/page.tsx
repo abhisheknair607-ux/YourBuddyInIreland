@@ -22,7 +22,7 @@ import {
   X
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
@@ -33,6 +33,7 @@ import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { GetInTouchModal } from "@/components/GetInTouchModal";
 import { PageTransition } from "@/components/PageTransition";
 import { TypingIndicator } from "@/components/TypingIndicator";
+import { VersionSwitchLink } from "@/components/VersionSwitchLink";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { APP_NAME, APP_SHORT_NAME } from "@/lib/branding";
 import {
@@ -56,27 +57,6 @@ import {
 } from "@/lib/replyLanguage";
 import { DASHBOARD_STARTER_PROMPT_KEY } from "@/lib/starterPrompts";
 import { type StudentProfileCompletion } from "@/lib/studentProfile";
-
-const sidebarPrimaryLinks = [
-  {
-    title: "Resources Hub",
-    description: "Official links & tools",
-    href: "/important-links",
-    icon: Globe2
-  },
-  {
-    title: "Currency Check",
-    description: "EUR to INR rates & alerts",
-    href: "/currency-check",
-    icon: Banknote
-  },
-  {
-    title: "Buddy & Expert Help",
-    description: "Support and guidance",
-    href: "/support",
-    icon: UsersRound
-  }
-] as const;
 
 const landingPrompts = [
   "Compare MSc Data Analytics options in Dublin and Limerick.",
@@ -200,6 +180,7 @@ function getDeploymentHeaders(previewUser?: DashboardUser | null) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [user, setUser] = useState<DashboardUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -231,6 +212,30 @@ export default function DashboardPage() {
   const [isWelcomeBackVisible, setIsWelcomeBackVisible] = useState(false);
   const [profileCompletion, setProfileCompletion] =
     useState<StudentProfileCompletion | null>(null);
+  const isV2Experience = pathname.startsWith("/v2");
+  const homeHref = isV2Experience ? "/v2" : "/";
+  const authHref = isV2Experience ? "/v2/register" : "/login";
+  const counterpartHref = isV2Experience ? "/dashboard" : "/v2/chat";
+  const sidebarPrimaryLinks = [
+    {
+      title: "Resources Hub",
+      description: "Official links & tools",
+      href: isV2Experience ? "/v2/resources" : "/important-links",
+      icon: Globe2
+    },
+    {
+      title: "Currency Check",
+      description: "EUR to INR rates & alerts",
+      href: isV2Experience ? "/v2/forex" : "/currency-check",
+      icon: Banknote
+    },
+    {
+      title: isV2Experience ? "Mentor Connect" : "Buddy & Expert Help",
+      description: isV2Experience ? "Prototype student guidance" : "Support and guidance",
+      href: isV2Experience ? "/v2/mentors" : "/support",
+      icon: UsersRound
+    }
+  ] as const;
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -276,13 +281,13 @@ export default function DashboardPage() {
         return;
       }
 
-      router.replace("/login");
+      router.replace(authHref);
       return;
     }
 
     setUser(activeUser);
     setIsCheckingAuth(false);
-  }, [router, session, status]);
+  }, [authHref, router, session, status]);
 
   useEffect(() => {
     const chatContainer = chatScrollRef.current;
@@ -671,7 +676,7 @@ export default function DashboardPage() {
 
   const goHome = () => {
     setIsSidebarOpen(false);
-    router.push("/");
+    router.push(homeHref);
   };
 
   const handleLogout = async () => {
@@ -679,11 +684,11 @@ export default function DashboardPage() {
     stopSpeaking();
 
     if (session?.user) {
-      await signOut({ callbackUrl: "/login" });
+      await signOut({ callbackUrl: authHref });
       return;
     }
 
-    router.push("/login");
+    router.push(authHref);
   };
 
   const deleteConversation = async (conversationId: string) => {
@@ -1319,12 +1324,20 @@ export default function DashboardPage() {
                 </button>
 
                 <Link
-                  href="/"
+                  href={homeHref}
                   className="inline-flex h-10 min-w-0 max-w-[148px] items-center justify-center overflow-hidden rounded-[1rem] border border-white/80 bg-white/80 px-2 py-1 transition hover:border-slate-300 hover:bg-white tablet:max-w-[170px]"
                   title={`Go to home page for ${APP_NAME}`}
                 >
                   <BrandLogo size="sm" className="max-h-8 w-[118px] tablet:w-[136px]" />
                 </Link>
+                <VersionSwitchLink
+                  href={counterpartHref}
+                  label={isV2Experience ? "Current Version" : "Open V2"}
+                  fromVersion={isV2Experience ? "v2" : "current"}
+                  toVersion={isV2Experience ? "current" : "v2"}
+                  source={isV2Experience ? "v2_chat" : "current_dashboard"}
+                  className="hidden min-h-[36px] px-3 text-xs laptop:inline-flex"
+                />
               </div>
 
               <div className="flex items-center gap-2">
@@ -1383,7 +1396,7 @@ export default function DashboardPage() {
                       className="mx-auto flex w-full max-w-2xl flex-col items-center text-center"
                     >
                       <Link
-                        href="/"
+                        href={homeHref}
                         className="group flex flex-col items-center"
                         title={`Go to home page for ${APP_NAME}`}
                       >

@@ -2,7 +2,7 @@
 
 import { Loader2, ArrowLeft, CheckCircle2, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 
@@ -10,6 +10,7 @@ import { AnimatedGradientBackground } from "@/components/AnimatedGradientBackgro
 import { FloatingStudyIcons } from "@/components/FloatingStudyIcons";
 import { PageTransition } from "@/components/PageTransition";
 import { PageTopIdentityHeader } from "@/components/PageTopIdentityHeader";
+import { VersionSwitchLink } from "@/components/VersionSwitchLink";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { getClientRequestHeaders } from "@/lib/clientRequestHeaders";
 import { LOCAL_PREVIEW_USER, isLocalPreviewHost } from "@/lib/localPreview";
@@ -138,6 +139,7 @@ function Select({
 
 export default function ProfilePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [user, setUser] = useState<ActiveUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -149,6 +151,11 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const isV2Experience = pathname.startsWith("/v2");
+  const homeHref = isV2Experience ? "/v2" : "/";
+  const authHref = isV2Experience ? "/v2/register" : "/login";
+  const chatHref = isV2Experience ? "/v2/chat" : "/dashboard";
+  const counterpartHref = isV2Experience ? "/profile" : "/v2/profile";
 
   useEffect(() => {
     const mockUser = getMockUser();
@@ -178,8 +185,8 @@ export default function ProfilePage() {
       return;
     }
 
-    router.replace("/login");
-  }, [router, session?.user, status]);
+    router.replace(authHref);
+  }, [authHref, router, session?.user, status]);
 
   useEffect(() => {
     if (!user) {
@@ -309,8 +316,21 @@ export default function ProfilePage() {
       <AnimatedGradientBackground />
       <FloatingStudyIcons />
 
-        <PageTransition className="relative z-10 flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden pt-safe">
-        <PageTopIdentityHeader icon={Sparkles} label="Profile" />
+      <PageTransition className="relative z-10 flex h-[100dvh] min-h-[100dvh] flex-col overflow-hidden pt-safe">
+        <PageTopIdentityHeader
+          icon={Sparkles}
+          label="Profile"
+          homeHref={homeHref}
+          actions={
+            <VersionSwitchLink
+              href={counterpartHref}
+              label={isV2Experience ? "Current Version" : "Open V2"}
+              fromVersion={isV2Experience ? "v2" : "current"}
+              toVersion={isV2Experience ? "current" : "v2"}
+              source={isV2Experience ? "v2_profile" : "current_profile"}
+            />
+          }
+        />
 
         <main className="page-shell flex-1 min-h-0 pb-4 pt-1 tablet:pb-6">
           <div className="scrollbar-hidden h-full overflow-y-auto overscroll-contain pr-1 tablet:pr-2">
@@ -590,7 +610,7 @@ export default function ProfilePage() {
                     </button>
 
                     <Link
-                      href="/dashboard"
+                      href={chatHref}
                       className="inline-flex min-h-[48px] items-center justify-center rounded-[1.2rem] border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                     >
                       Return to chat

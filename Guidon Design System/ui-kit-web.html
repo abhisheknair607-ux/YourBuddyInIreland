@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Guid-On · Web UI Kit · All 8 pages</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="colors_and_type.css">
+<link rel="stylesheet" href="styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  html,body{margin:0;padding:0;background:#eef4fb;font-family:var(--font-inter);color:var(--fg-primary)}
+  .kit-page{max-width:1480px;margin:0 auto;padding:48px 32px 96px}
+  .kit-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:36px;flex-wrap:wrap}
+  .kit-crumb{font-size:11px;font-weight:600;color:#0369a1;text-transform:uppercase;letter-spacing:.24em}
+  .kit-toc{display:flex;gap:6px;flex-wrap:wrap;max-width:560px}
+  .kit-toc a{font-size:12px;color:#475569;background:#fff;border:1px solid #e2e8f0;border-radius:9999px;padding:6px 12px;text-decoration:none;font-weight:500;cursor:pointer}
+  .kit-toc a:hover{background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
+  section.kit-row{margin-top:72px;scroll-margin-top:24px}
+  .row-head{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+  .row-head .num{font-family:var(--font-poppins);font-weight:600;font-size:18px;color:#cbd5e1}
+  .row-head h2{margin:0;font-family:var(--font-poppins);font-size:24px;font-weight:600;color:#020617;letter-spacing:-0.01em}
+  .row-head p{margin:0;font-size:13px;color:#64748b;max-width:580px;line-height:1.55}
+  .frame-cap{display:flex;flex-direction:column;gap:14px}
+  .frame-cap .label{font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.16em}
+  .frame-cap .desc{font-size:12px;color:#64748b;max-width:760px;line-height:1.55}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="browser-window.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="web-pages-1.jsx"></script>
+<script type="text/babel" src="web-pages-2.jsx"></script>
+<script type="text/babel" src="web-pages-3.jsx"></script>
+<script type="text/babel" src="web-pages-4.jsx"></script>
+
+<script type="text/babel">
+  const { useState } = React;
+
+  const PAGES = [
+    { id: "home",      n: "01", t: "Homepage",            desc: "Hero with India→Ireland map, six-feature grid, journey timeline, testimonials, and CTA band. The marketing entry point.", url: "guid-on.ie", h: 1600, Comp: WebHome },
+    { id: "demo",      n: "02", t: "Demo & Walkthrough",  desc: "Six-step interactive tour, three persona walkthroughs, free-vs-pro comparison, FAQ, and final CTA. No signup required.", url: "guid-on.ie/demo", h: 1800, Comp: WebDemo },
+    { id: "chatbot",   n: "03", t: "AI Chatbot",          desc: "Three-column app: topics rail, conversation thread with verified-source citations, free-message meter and upgrade prompt.", url: "guid-on.ie/chat", h: 820, Comp: WebChatbot },
+    { id: "register",  n: "04", t: "Registration",        desc: "Split-screen onboarding — brand-coloured left panel with benefits, three-step right form with situation tiles and worry chips.", url: "guid-on.ie/register", h: 820, Comp: WebRegister },
+    { id: "resources", n: "05", t: "Resource Hub",        desc: "Tabbed directory across 8 categories (Visa, Banking, Health, Housing, College, Transport, Community, Work). Required/Important/Helpful badges and verified-on stamps.", url: "guid-on.ie/resources", h: 1400, Comp: WebResources },
+    { id: "forex",     n: "06", t: "Forex Notifier",      desc: "Live INR↔EUR cards, quick converter with saving callout, rate-alert setup, 7-day history table, transfer-service comparison.", url: "guid-on.ie/forex", h: 1700, Comp: WebForex },
+    { id: "mentors",   n: "07", t: "Mentor Connect",      desc: "Filterable grid of verified mentor profiles with ratings, response times, topic tags, and inline connect CTAs. Become-a-mentor band below.", url: "guid-on.ie/mentors", h: 1300, Comp: WebMentors },
+    { id: "docs",      n: "08", t: "Document Builder",    desc: "Three-column wizard: document library on the left, five-step SOP wizard with AI tips and live preview in the middle, strength score on the right.", url: "guid-on.ie/docs/sop", h: 980, Comp: WebDocs }
+  ];
+
+  const Frame = ({ page }) => {
+    const C = page.Comp;
+    return (
+      <section className="kit-row" id={page.id}>
+        <div className="row-head">
+          <div className="num">{page.n}</div>
+          <h2>{page.t}</h2>
+          <p>{page.desc}</p>
+        </div>
+        <div className="frame-cap">
+          <ChromeWindow
+            tabs={[{ title: "Guid-On · India → Ireland" }, { title: "UCD" }]}
+            activeIndex={0}
+            url={page.url}
+            width={1320}
+            height={page.h}
+          >
+            <C onNav={(id) => {
+              if (typeof id !== "string") return;
+              const el = document.getElementById(id);
+              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }} />
+          </ChromeWindow>
+        </div>
+      </section>
+    );
+  };
+
+  const App = () => (
+    <div className="kit-page">
+      <header className="kit-header">
+        <div>
+          <div className="kit-crumb">Guid-On · UI Kit · Web · 8 pages</div>
+          <h1 style={{ fontFamily: "var(--font-poppins)", fontSize: 36, fontWeight: 600, color: "#020617", letterSpacing: "-0.02em", margin: "8px 0 6px", lineHeight: 1.1 }}>Every desktop surface, pixel-perfect.</h1>
+          <p style={{ fontSize: 15, color: "#475569", lineHeight: 1.6, margin: 0, maxWidth: 720 }}>Click any tab to jump between pages. Same gradient + glass + Sky/Blue palette as the design system — content from the platform spec. All eight pages are interactive: try the navigation, change tabs, set forex alerts, click through the SOP wizard.</p>
+        </div>
+        <div className="kit-toc">
+          {PAGES.map((p) => (
+            <a key={p.id} onClick={() => document.getElementById(p.id).scrollIntoView({ behavior: "smooth", block: "start" })}>{p.n} · {p.t}</a>
+          ))}
+        </div>
+      </header>
+      {PAGES.map((p) => <Frame key={p.id} page={p} />)}
+    </div>
+  );
+
+  // Wait for all script-loaded components, then mount.
+  function mount() {
+    if (typeof WebHome === "undefined" || typeof WebDemo === "undefined" || typeof WebChatbot === "undefined" || typeof WebRegister === "undefined" || typeof WebResources === "undefined" || typeof WebForex === "undefined" || typeof WebMentors === "undefined" || typeof WebDocs === "undefined" || typeof ChromeWindow === "undefined") {
+      return setTimeout(mount, 50);
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  }
+  mount();
+</script>
+</body>
+</html>
